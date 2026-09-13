@@ -1,0 +1,71 @@
+{
+  "results": [
+    {
+      "test": "Student2 login",
+      "status": "PASS",
+      "detail": "http://localhost:3000/student"
+    },
+    {
+      "test": "Direct navigation to subject",
+      "status": "PASS",
+      "detail": "http://localhost:3000/student/learning-hub/4519d862-a17b-4ad7-ab04-cbfdc9d8f2a6"
+    },
+    {
+      "test": "FINAL UPLOAD TEST CHAPTER visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "test-large.pdf resource listed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "Download button visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "Download button with correct endpoint",
+      "status": "PASS",
+      "detail": "/api/notes/download/787a99d5-789c-4ff3-8c7d-68e99e254011?type=PDF"
+    },
+    {
+      "test": "Download endpoint HTTP 200",
+      "status": "PASS",
+      "detail": "Content-Type: application/pdf"
+    },
+    {
+      "test": "PDF content served directly",
+      "status": "PASS",
+      "detail": "Binary PDF response"
+    },
+    {
+      "test": "No SUPABASE_SECRET_KEY in responses",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "test": "Supabase GET requests (signed download)",
+      "status": "NOT_TESTED",
+      "detail": "0 Supabase requests total"
+    },
+    {
+      "test": "Student2 blocked from /admin",
+      "status": "PASS",
+      "detail": "http://localhost:3000/student"
+    },
+    {
+      "test": "Student2 blocked from /teacher",
+      "status": "PASS",
+      "detail": "http://localhost:3000/student"
+    },
+    {
+      "test": "Invalid subject URL denied",
+      "status": "PASS",
+      "detail": "URL: http://localhost:3000/student/learning-hub/00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "supabaseRequests": [],
+  "secretLeakFound": false
+}

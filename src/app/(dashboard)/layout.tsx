@@ -12,11 +12,11 @@ export default async function DashboardLayout({
   const session = await verifySession()
 
   if (!session?.userId) {
-    redirect('/login')
+    redirect("/login")
   }
 
   if (session.needsPasswordChange) {
-    redirect('/change-password')
+    redirect("/change-password")
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -24,27 +24,30 @@ export default async function DashboardLayout({
     include: {
       teacher: {
         include: {
-          classes: { select: { id: true } }
-        }
-      }
-    }
+          classes: { select: { id: true } },
+        },
+      },
+    },
   })
 
-  const isClassTeacher = dbUser?.role === "TEACHER" && !!dbUser.teacher?.classes?.length;
+  const isClassTeacher = dbUser?.role === "TEACHER" && !!dbUser.teacher?.classes?.length
 
   if (!dbUser) {
-    redirect('/login')
+    redirect("/login")
   }
 
-  let settings = await prisma.schoolSettings.findUnique({ where: { id: "default" }, include: { activeSession: true } })
+  let settings = await prisma.schoolSettings.findUnique({
+    where: { id: "default" },
+    include: { activeSession: true },
+  })
   if (!settings) {
     settings = await prisma.schoolSettings.create({
       data: {
         id: "default",
       },
       include: {
-        activeSession: true
-      }
+        activeSession: true,
+      },
     })
   }
 
@@ -57,31 +60,30 @@ export default async function DashboardLayout({
       readAt: null,
       alert: {
         status: "PUBLISHED",
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } }
-        ]
-      }
-    }
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+    },
   })
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
+    <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr] bg-slate-50">
+      {/* Sidebar Desktop Shell — Solid White Background, 1px Border, No Drop Shadows */}
+      <aside className="hidden border-r border-slate-200 bg-white md:block h-screen sticky top-0">
         <Sidebar role={dbUser.role} schoolName={schoolName} isClassTeacher={isClassTeacher} />
-      </div>
-      <div className="flex flex-col">
-        <Header 
-          userName={dbUser.name || dbUser.email} 
-          role={dbUser.role} 
-          academicSession={activeSessionName} 
-          schoolName={schoolName} 
-          isClassTeacher={isClassTeacher} 
+      </aside>
+
+      {/* Main Content Column */}
+      <div className="flex flex-col flex-1 min-w-0">
+        <Header
+          userName={dbUser.name || dbUser.email}
+          role={dbUser.role}
+          academicSession={activeSessionName}
+          schoolName={schoolName}
+          isClassTeacher={isClassTeacher}
           unreadAlertsCount={unreadAlertsCount}
         />
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:gap-8 lg:p-8 bg-slate-50/40 dark:bg-transparent">
-          {children}
-        </main>
+        {/* Flattened Content Area — Sits directly on bg-slate-50 with consistent p-6 lg:p-8 padding */}
+        <main className="flex-1 p-6 lg:p-8 bg-slate-50">{children}</main>
       </div>
     </div>
   )

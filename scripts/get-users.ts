@@ -1,12 +1,24 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
+import prisma from '../src/lib/prisma';
 async function main() {
-  const teacher = await prisma.user.findFirst({ where: { role: 'TEACHER' }})
-  const student = await prisma.user.findFirst({ where: { role: 'STUDENT' }})
-  console.log("Teacher email:", teacher?.email)
-  console.log("Student email:", student?.email)
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      teacher: {
+        select: {
+          classTeacherAssignments: { select: { class: { select: { name: true } } } },
+          teachingAssignments: { select: { subject: { select: { name: true } }, class: { select: { name: true } } } }
+        }
+      },
+      student: {
+        select: {
+          enrollments: { select: { class: { select: { name: true } } } }
+        }
+      }
+    }
+  });
+  console.log(JSON.stringify(users, null, 2));
 }
-
-main().catch(e => console.error(e)).finally(async () => await prisma.$disconnect())
+main().catch(console.error).finally(() => prisma.$disconnect());

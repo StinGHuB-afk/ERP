@@ -37,6 +37,25 @@ async function bootstrap() {
   console.log("Executing schema.sql on remote database...")
   
   try {
+    // Add missing StudentEnrollment columns if table exists
+    const alterCols = [
+      'ALTER TABLE "StudentEnrollment" ADD COLUMN "startDate" DATETIME DEFAULT CURRENT_TIMESTAMP;',
+      'ALTER TABLE "StudentEnrollment" ADD COLUMN "endDate" DATETIME;',
+      'ALTER TABLE "StudentEnrollment" ADD COLUMN "transferDate" DATETIME;',
+      'ALTER TABLE "StudentEnrollment" ADD COLUMN "transferReason" TEXT;',
+      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "verificationCode" TEXT;',
+      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "isRevoked" BOOLEAN DEFAULT 0;',
+      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "revokedAt" DATETIME;',
+      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "revokedReason" TEXT;'
+    ]
+    for (const alterSql of alterCols) {
+      try {
+        await client.execute(alterSql)
+        console.log(`Executed: ${alterSql}`)
+      } catch (e) {
+        // Column already exists, ignore
+      }
+    }
     const sqlStatements = sql
       .split(";")
       .map(stmt => stmt.trim())

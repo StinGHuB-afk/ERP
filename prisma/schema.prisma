@@ -15,6 +15,7 @@ enum Role {
   ADMIN
   TEACHER
   STUDENT
+  PARENT
 }
 
 enum MarkStatus {
@@ -56,6 +57,18 @@ enum EnrollmentStatus {
   INACTIVE // Student left school
 }
 
+enum RiskLevel {
+  HIGH
+  MODERATE
+  LOW
+}
+
+enum RiskFlagStatus {
+  PENDING
+  ACKNOWLEDGED
+  DISMISSED
+}
+
 // ============================================================
 // CORE USER MODELS
 // ============================================================
@@ -72,10 +85,12 @@ model User {
 
   teacher         Teacher?
   student         Student?
+  parent          Parent?
   announcements   Announcement[]
   activityLogs    ActivityLog[]
   alerts          Alert[]
   alertRecipients AlertRecipient[]
+  riskFlagsReviewed StudentRiskFlag[]
 }
 
 model Teacher {
@@ -109,6 +124,8 @@ model Student {
   attendance      Attendance[]
   academicRecords StudentAcademicRecord[]
   enrollments     StudentEnrollment[]
+  riskFlags       StudentRiskFlag[]
+  parents         ParentStudent[]
 }
 
 model Class {
@@ -125,6 +142,7 @@ model Class {
   academicRecords  StudentAcademicRecord[]
   enrollments      StudentEnrollment[]
   learningChapters LearningChapter[]
+  riskFlags        StudentRiskFlag[]
 
   // CANONICAL: New assignment relations
   classTeacherAssignments ClassTeacherAssignment[]
@@ -216,6 +234,7 @@ model AcademicSession {
   attendance       Attendance[]
   academicRecords  StudentAcademicRecord[]
   learningChapters LearningChapter[]
+  riskFlags        StudentRiskFlag[]
 
   // CANONICAL: New assignment relations
   classTeacherAssignments ClassTeacherAssignment[]
@@ -308,6 +327,12 @@ model StudentAcademicRecord {
   status      AcademicRecordStatus @default(DRAFT)
   publishedAt DateTime?
   finalizedAt DateTime?
+
+  // Phase D: Cryptographic Verification & Revocation Metadata
+  verificationCode String?   @unique
+  isRevoked        Boolean   @default(false)
+  revokedAt        DateTime?
+  revokedReason    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -592,4 +617,63 @@ model AlertRecipient {
 
   @@unique([alertId, userId])
   @@index([userId, readAt])
+}
+
+// ============================================================
+// AT-RISK STUDENT FLAGS
+// ============================================================
+
+model StudentRiskFlag {
+  id                String         @id @default(uuid())
+  studentId         String
+  classId           String
+  academicSessionId String
+  riskLevel         RiskLevel
+  riskScore         Float
+  reasons           String         // JSON string array of risk triggers e.g. ["ATTENDANCE_CRITICAL", "FAILED_SUBJECTS"]
+  ruleVersion       String         @default("AT_RISK_RULE_V1.0")
+  status            RiskFlagStatus @default(PENDING)
+  reviewNote        String?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  reviewedBy      User?           @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, academicSessionId, status])
+  @@index([classId, academicSessionId, status])
+}
+
+// ============================================================
+// PARENT PORTAL & PARENT-STUDENT MAPPING
+// ============================================================
+
+model Parent {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  children ParentStudent[]
+}
+
+model ParentStudent {
+  id               String   @id @default(uuid())
+  parentId         String
+  studentId        String
+  relationship     String   @default("Parent") // e.g. "Father", "Mother", "Guardian"
+  isPrimaryContact Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
 }

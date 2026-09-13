@@ -1,0 +1,32 @@
+{
+  "runId": "7DTHO2P",
+  "timestamp": "2026-08-29T06:43:56.507Z",
+  "createdIds": {
+    "users": [
+      "e341cb02-26fe-4678-8339-961e27e1b243",
+      "6cd0fc5d-0ab9-408a-a4b5-30b27fd62c5d",
+      "ae21bb1e-e7c0-401a-89f8-301c134e8e2d",
+      "e4ae3cfe-4fb3-429a-805f-ce793be57815",
+      "62afc0cd-e246-445f-879a-a8cc37943ce2"
+    ],
+    "classes": [
+      "4bf651c1-37b6-4450-83df-b78b84ef00dd",
+      "7cbac3d7-5378-477d-b25d-95bf1d4dfbee"
+    ],
+    "subjects": [
+      "b65a60af-a41a-4ff7-b3d7-bbab4186ee88"
+    ],
+    "sessions": [
+      "16e54ac2-2d2f-437a-b224-1d7c9432d936"
+    ],
+    "enrollments": [],
+    "classTeacherAssignments": [
+      "34b4de9a-63ef-4a0c-a7f5-8380b6d64136",
+      "08811113-8f63-4ff4-a1f0-94bd3aba47c5",
+      "295a51cd-093d-48a7-921d-991056aca4f6"
+    ],
+    "teachingAssignments": [],
+    "marks": []
+  },
+  "previousActiveSessionId": null
+}

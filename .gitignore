@@ -42,3 +42,10 @@ next-env.d.ts
 
 /src/generated/prisma
 backup-pre-phase3.json 
+
+*.db
+*.db-journal
+.tmp-*
+temp_schema_check/
+test-results/
+

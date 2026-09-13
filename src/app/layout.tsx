@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Strict Enterprise Sans-Serif Font Setup (Inter)
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "EduManage Pro",
-  description: "Advanced Academic Management System",
+  title: "School ERP - Enterprise Academic Management System",
+  description: "Enterprise-Grade School ERP Platform",
 };
 
 export default function RootLayout({
@@ -24,11 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased selection:bg-blue-100 selection:text-blue-900`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className={`${inter.className} min-h-full flex flex-col bg-slate-50 text-slate-900`}>
         {children}
         <Toaster richColors position="top-right" />
       </body>

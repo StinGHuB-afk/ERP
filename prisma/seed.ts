@@ -158,16 +158,33 @@ async function main() {
       { subject: historySubject, teacherId: teacher3.id },
     ]
 
+    // Resolve Active Session
+    let activeSession = await prisma.academicSession.findFirst({
+      where: { status: 'ACTIVE' },
+    })
+
+    if (!activeSession) {
+      activeSession = await prisma.academicSession.create({
+        data: {
+          name: '2025-2026',
+          startDate: new Date('2025-08-01'),
+          endDate: new Date('2026-06-30'),
+          status: 'ACTIVE',
+        },
+      })
+    }
+
     for (const { subject, teacherId } of subjects) {
       // Random score between 60 and 100
       const score = Math.floor(Math.random() * 41) + 60
       const isPublished = Math.random() > 0.3 // 70% published
       await prisma.mark.upsert({
         where: {
-          studentId_subjectId_examType: {
+          studentId_subjectId_examType_academicSessionId: {
             studentId: student.id,
             subjectId: subject.id,
             examType: 'Midterm',
+            academicSessionId: activeSession.id,
           },
         },
         update: { score, status: isPublished ? 'PUBLISHED' : 'DRAFT' },
@@ -175,6 +192,7 @@ async function main() {
           studentId: student.id,
           subjectId: subject.id,
           teacherId,
+          academicSessionId: activeSession.id,
           examType: 'Midterm',
           score,
           maxScore: 100,
@@ -182,6 +200,53 @@ async function main() {
         },
       })
     }
+  }
+
+  // 6. Create Parent User & ParentStudent Mappings
+  const parentPassword = await bcrypt.hash('password123', 10)
+  const parentUser = await prisma.user.upsert({
+    where: { email: 'parent@school.local' },
+    update: { password: parentPassword },
+    create: {
+      email: 'parent@school.local',
+      password: parentPassword,
+      name: 'Robert Parent',
+      role: 'PARENT',
+    },
+  })
+
+  const parent = await prisma.parent.upsert({
+    where: { userId: parentUser.id },
+    update: {},
+    create: { userId: parentUser.id },
+  })
+
+  if (students.length >= 2) {
+    await prisma.parentStudent.upsert({
+      where: {
+        parentId_studentId: { parentId: parent.id, studentId: students[0].id },
+      },
+      update: {},
+      create: {
+        parentId: parent.id,
+        studentId: students[0].id,
+        relationship: 'Father',
+        isPrimaryContact: true,
+      },
+    })
+
+    await prisma.parentStudent.upsert({
+      where: {
+        parentId_studentId: { parentId: parent.id, studentId: students[1].id },
+      },
+      update: {},
+      create: {
+        parentId: parent.id,
+        studentId: students[1].id,
+        relationship: 'Father',
+        isPrimaryContact: false,
+      },
+    })
   }
 
   console.log('Seed completed successfully.')

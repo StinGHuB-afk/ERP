@@ -98,37 +98,51 @@ export async function promoteStudents(studentIds: string[], destinationClassId: 
   }
 
   await prisma.$transaction(async (tx) => {
-    // 1. Update the student current class pointer
+    // 1. Update the student current class pointer in a single batch
     await tx.student.updateMany({
       where: { id: { in: studentIds } },
       data: { classId: destinationClassId }
     });
 
-    // 2. Upsert enrollment to prevent duplicates and preserve history
+    // 2. Fetch existing active enrollments for the next session in a single batch
+    const existingEnrollments = await tx.studentEnrollment.findMany({
+      where: {
+        studentId: { in: studentIds },
+        academicSessionId: nextSession.id,
+        status: "ACTIVE"
+      },
+      select: { id: true, studentId: true }
+    });
+
+    const existingMap = new Map(existingEnrollments.map(e => [e.studentId, e.id]));
+    const updateIds: string[] = [];
+    const newEnrollments: Array<{ studentId: string; classId: string; academicSessionId: string; status: "ACTIVE" }> = [];
+
     for (const studentId of studentIds) {
-      const existingEnrollment = await tx.studentEnrollment.findFirst({
-        where: {
+      const existingId = existingMap.get(studentId);
+      if (existingId) {
+        updateIds.push(existingId);
+      } else {
+        newEnrollments.push({
           studentId,
+          classId: destinationClassId,
           academicSessionId: nextSession.id,
           status: "ACTIVE"
-        }
-      });
-
-      if (existingEnrollment) {
-        await tx.studentEnrollment.update({
-          where: { id: existingEnrollment.id },
-          data: { classId: destinationClassId }
-        });
-      } else {
-        await tx.studentEnrollment.create({
-          data: {
-            studentId,
-            classId: destinationClassId,
-            academicSessionId: nextSession.id,
-            status: "ACTIVE"
-          }
         });
       }
+    }
+
+    if (updateIds.length > 0) {
+      await tx.studentEnrollment.updateMany({
+        where: { id: { in: updateIds } },
+        data: { classId: destinationClassId }
+      });
+    }
+
+    if (newEnrollments.length > 0) {
+      await tx.studentEnrollment.createMany({
+        data: newEnrollments
+      });
     }
   });
 

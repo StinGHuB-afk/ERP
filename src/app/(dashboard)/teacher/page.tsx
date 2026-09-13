@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, FileText, CheckCircle, Clock } from "lucide-react"
+import { BookOpen, FileText, CheckCircle, Clock, AlertTriangle } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -48,10 +48,16 @@ export default async function TeacherDashboard() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Teacher Dashboard</h1>
           <p className="text-sm text-slate-500">Welcome back, {teacherUser.name}. Here is your academic overview.</p>
         </div>
-        <Link href="/teacher/marks" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm inline-flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          Quick Marks Entry
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/teacher/at-risk" className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm inline-flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            At-Risk Students
+          </Link>
+          <Link href="/teacher/marks" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm inline-flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Quick Marks Entry
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

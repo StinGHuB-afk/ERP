@@ -10,6 +10,10 @@ import { PaginationControls } from "@/components/ui/pagination-controls"
 import { CsvExportButton } from "@/components/dashboard/csv-export-button"
 import { exportAllStudents } from "@/app/actions/export"
 import { ResetPasswordButton } from "@/components/dashboard/reset-password-button"
+import { CsvUploader } from "@/components/admin/csv-uploader"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Upload } from "lucide-react"
 
 export default async function AdminStudentsPage(
   props: { searchParams: Promise<{ q?: string, page?: string, classId?: string }> }
@@ -17,7 +21,7 @@ export default async function AdminStudentsPage(
   const searchParams = await props.searchParams
   const query = searchParams.q || ""
   const page = parseInt(searchParams.page || "1")
-  const classId = searchParams.classId || "all"
+  const classId = searchParams.classId || ""
   const pageSize = 10
 
   const whereCondition: Prisma.StudentWhereInput = {
@@ -28,7 +32,7 @@ export default async function AdminStudentsPage(
 
   if (classId === "unassigned") {
     whereCondition.classId = null
-  } else if (classId !== "all") {
+  } else if (classId && classId !== "all" && classId.trim() !== "") {
     whereCondition.classId = classId
   }
 
@@ -48,12 +52,19 @@ export default async function AdminStudentsPage(
       take: pageSize,
     }),
     prisma.student.count({ where: whereCondition }),
-    prisma.class.findMany({ orderBy: { name: 'asc' } })
+    prisma.class.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    })
   ])
 
+  // Class Filter Options: display class.name (e.g. "Grade 10-A") while storing class.id as underlying value
   const classOptions = [
     { label: "Unassigned", value: "unassigned" },
-    ...(Array.isArray(classes) ? classes : []).map(c => ({ label: c.name, value: c.id }))
+    ...(Array.isArray(classes) ? classes : []).map((c) => ({
+      label: c.name,
+      value: c.id,
+    })),
   ]
 
   const exportData = (Array.isArray(students) ? students : []).map(student => ({
@@ -82,13 +93,34 @@ export default async function AdminStudentsPage(
             fetchAllAction={exportAllStudents.bind(null, classId) as any}
             label="Export All Students"
           />
+          <Dialog>
+            <DialogTrigger
+              suppressHydrationWarning
+              render={
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  suppressHydrationWarning
+                >
+                  <Upload className="h-4 w-4 text-slate-500" />
+                  Upload CSV
+                </Button>
+              }
+            />
+            <DialogContent className="max-w-3xl p-6 bg-white rounded-xl">
+              <DialogHeader>
+                <DialogTitle className="sr-only">CSV Student Onboarding</DialogTitle>
+              </DialogHeader>
+              <CsvUploader />
+            </DialogContent>
+          </Dialog>
           <StudentForm classes={classes} />
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-md shadow-sm border border-slate-200">
         <DataTableSearch placeholder="Search by name..." />
-        <DataTableFilter paramKey="classId" title="Class" options={classOptions} />
+        <DataTableFilter paramKey="classId" title="Class" allLabel="All Classes" options={classOptions} />
       </div>
 
       <div className="rounded-md border bg-white shadow-sm overflow-hidden">

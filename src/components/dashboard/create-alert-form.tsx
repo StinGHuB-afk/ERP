@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createAlert } from "@/app/actions/alert"
+import { AlertTargetPayload } from "@/lib/auth/alert-authorization"
 import { AlertPriority } from "@prisma/client"
 import { BellRing, Plus, Loader2 } from "lucide-react"
 
@@ -32,7 +33,9 @@ export function CreateAlertForm({ isAdmin, assignedClasses = [] }: CreateAlertFo
     const requiresAck = formData.get("requiresAcknowledgement") === "on"
 
     try {
-      let payload: any = { targetType }
+      const payload: AlertTargetPayload = { 
+        targetType: targetType as AlertTargetPayload["targetType"] 
+      }
       
       if (targetType === "SPECIFIC_CLASSES") {
         if (!selectedClassId) throw new Error("Please select a class")
@@ -53,8 +56,9 @@ export function CreateAlertForm({ isAdmin, assignedClasses = [] }: CreateAlertFo
         setIsOpen(false)
         router.refresh()
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred."
+      setError(msg)
     } finally {
       setIsLoading(false)
     }

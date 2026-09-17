@@ -6,10 +6,14 @@ import { LogOut, User as UserIcon, BellRing } from "lucide-react"
 import { logout } from "@/app/(auth)/login/actions"
 import { MobileNav } from "./mobile-nav"
 
+import { SessionSwitcher, AcademicSessionOption } from "./session-switcher"
+
 export function Header({
   userName,
   role,
   academicSession,
+  sessions,
+  currentSessionId,
   schoolName,
   isClassTeacher,
   unreadAlertsCount = 0,
@@ -17,6 +21,8 @@ export function Header({
   userName: string | null
   role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
   academicSession: string
+  sessions?: AcademicSessionOption[]
+  currentSessionId?: string
   schoolName: string
   isClassTeacher?: boolean
   unreadAlertsCount?: number
@@ -34,9 +40,7 @@ export function Header({
         <h1 className="hidden sm:block text-sm font-semibold tracking-tight text-slate-900 capitalize">
           {role.toLowerCase()} Portal
         </h1>
-        <div className="hidden md:flex items-center px-2.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700">
-          Session: {academicSession}
-        </div>
+        <SessionSwitcher sessions={sessions} currentSessionId={currentSessionId} />
       </div>
 
       <div className="flex items-center gap-4">

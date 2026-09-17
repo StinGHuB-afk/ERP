@@ -2,12 +2,31 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { FileText, Video, MessageSquare, Download, Lock } from "lucide-react"
-import { ExplanationRenderer } from "@/components/ui/explanation-renderer"
+import { FileText, Video, MessageSquare, Download } from "lucide-react"
+import { ExplanationRenderer, ASTNode } from "@/components/ui/explanation-renderer"
 
-export function StudentHubViewer({ chapters, activeSessionId }: { chapters: any[], activeSessionId: string }) {
+export interface HubTopicMedia {
+  id: string
+  title: string
+}
+
+export interface HubTopic {
+  id: string
+  title: string
+  pdfs?: HubTopicMedia[]
+  videos?: HubTopicMedia[]
+  explanation?: { content: string } | null
+}
+
+export interface HubChapter {
+  id: string
+  title: string
+  topics?: HubTopic[]
+}
+
+export function StudentHubViewer({ chapters }: { chapters: HubChapter[]; activeSessionId?: string }) {
   const [viewingExplanationFor, setViewingExplanationFor] = useState<string | null>(null)
-  const [explanationData, setExplanationData] = useState<any[]>([])
+  const [explanationData, setExplanationData] = useState<ASTNode[]>([])
 
   return (
     <div className="space-y-6">
@@ -18,7 +37,7 @@ export function StudentHubViewer({ chapters, activeSessionId }: { chapters: any[
           </div>
 
           <div className="p-4 space-y-4">
-            {chapter.topics?.map((topic: any) => (
+            {chapter.topics?.map((topic) => (
               <div key={topic.id} className="border border-slate-200 rounded-md p-4 bg-slate-50">
                 <h3 className="font-semibold text-lg mb-4 border-b pb-2">{topic.title}</h3>
 
@@ -30,7 +49,7 @@ export function StudentHubViewer({ chapters, activeSessionId }: { chapters: any[
                         <FileText className="h-4 w-4" /> Notes & PDFs
                       </h4>
                       <ul className="space-y-2">
-                        {topic.pdfs.map((pdf: any) => (
+                        {topic.pdfs.map((pdf) => (
                           <li key={pdf.id} className="text-sm border p-3 rounded-md bg-white flex justify-between items-center shadow-sm">
                             <span className="font-medium">{pdf.title}</span>
                             <a href={`/api/notes/download/${pdf.id}?type=PDF`} target="_blank" rel="noreferrer">
@@ -51,7 +70,7 @@ export function StudentHubViewer({ chapters, activeSessionId }: { chapters: any[
                         <Video className="h-4 w-4" /> Videos
                       </h4>
                       <ul className="space-y-2">
-                        {topic.videos.map((vid: any) => (
+                        {topic.videos.map((vid) => (
                           <li key={vid.id} className="text-sm border p-3 rounded-md bg-white flex justify-between items-center shadow-sm">
                             <span className="font-medium">{vid.title}</span>
                             <a href={`/api/notes/download/${vid.id}?type=VIDEO`} target="_blank" rel="noreferrer">
@@ -72,7 +91,7 @@ export function StudentHubViewer({ chapters, activeSessionId }: { chapters: any[
                         <MessageSquare className="h-4 w-4" /> Interactive Explanation
                       </h4>
                       <Button variant="default" size="sm" onClick={() => {
-                        setExplanationData(JSON.parse(topic.explanation.content))
+                        setExplanationData(JSON.parse(topic.explanation?.content || "[]"))
                         setViewingExplanationFor(topic.id)
                       }}>View Explanation</Button>
 

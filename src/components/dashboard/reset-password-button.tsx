@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 
 export function ResetPasswordButton({ userId, userName }: { userId: string, userName?: string }) {
@@ -31,7 +30,7 @@ export function ResetPasswordButton({ userId, userName }: { userId: string, user
       } else if (res.tempPassword) {
         setTempPassword(res.tempPassword)
       }
-    } catch (err: any) {
+    } catch {
       setError("Failed to reset password")
     } finally {
       setIsPending(false)

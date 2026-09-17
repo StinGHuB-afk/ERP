@@ -115,9 +115,9 @@ export default async function StudentProfilePage(
 
   // 2. Marks
   const publishedMarks = student.marks.filter(m => m.status === 'PUBLISHED')
-  const totalScore = publishedMarks.reduce((sum, m) => sum + m.score, 0)
+  const totalScore = publishedMarks.reduce((sum, m) => sum + (m.score ?? 0), 0)
   const totalMaxScore = publishedMarks.reduce((sum, m) => sum + m.maxScore, 0)
-  const failedSubjectCount = publishedMarks.filter(m => (m.score / m.maxScore) * 100 < 50).length
+  const failedSubjectCount = publishedMarks.filter(m => (((m.score ?? 0) / m.maxScore) * 100) < 50).length
   
   let finalPercentage = 0
   let finalGrade = "N/A"
@@ -314,14 +314,15 @@ export default async function StudentProfilePage(
                       </TableRow>
                     ) : (
                       student.marks.map((mark) => {
-                        const percent = Math.round((mark.score / mark.maxScore) * 100)
+                        const markScore = mark.score ?? 0
+                        const percent = Math.round((markScore / mark.maxScore) * 100)
                         const grade = getGradeFromPercentage(percent)
                         return (
                           <TableRow key={mark.id} className="print:border-b print:border-slate-300">
                             <TableCell className="font-medium text-slate-900">{mark.subject.name}</TableCell>
                             <TableCell className="text-slate-600">{mark.examType}</TableCell>
                             <TableCell className="text-right font-medium">
-                              {mark.score} <span className="text-xs text-slate-400 font-normal">/ {mark.maxScore}</span>
+                              {mark.score ?? "-"} <span className="text-xs text-slate-400 font-normal">/ {mark.maxScore}</span>
                             </TableCell>
                             <TableCell className="text-right">{percent}%</TableCell>
                             <TableCell className="text-center">

@@ -18,7 +18,22 @@ enum Role {
   PARENT
 }
 
+enum StudentStatus {
+  ACTIVE
+  TRANSFERRED
+  GRADUATED
+}
+
+enum GradingScale {
+  PERCENTAGE
+  LETTER
+  PASS_FAIL
+}
+
 enum MarkStatus {
+  GRADED
+  EXEMPT
+  ABSENT
   DRAFT
   PUBLISHED
 }
@@ -47,14 +62,11 @@ enum ContentStatus {
   ARCHIVED
 }
 
-// NEW: Lifecycle status for student enrollments
-// A student can have multiple records per session (e.g., TRANSFERRED history + ACTIVE)
-// Exactly ONE ACTIVE enrollment per student per session is enforced at application layer.
 enum EnrollmentStatus {
-  ACTIVE // Current canonical enrollment
-  TRANSFERRED // Historical record — student moved to another class in same session
-  COMPLETED // Session ended normally (set during promotion)
-  INACTIVE // Student left school
+  ACTIVE
+  TRANSFERRED
+  COMPLETED
+  INACTIVE
 }
 
 enum RiskLevel {
@@ -74,23 +86,27 @@ enum RiskFlagStatus {
 // ============================================================
 
 model User {
-  id                 String   @id @default(uuid())
-  email              String   @unique
-  password           String
-  role               Role     @default(STUDENT)
-  name               String?
-  mustChangePassword Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  password            String
+  role                Role     @default(STUDENT)
+  name                String?
+  mustChangePassword  Boolean  @default(false)
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  teacher         Teacher?
-  student         Student?
-  parent          Parent?
-  announcements   Announcement[]
-  activityLogs    ActivityLog[]
-  alerts          Alert[]
-  alertRecipients AlertRecipient[]
-  riskFlagsReviewed StudentRiskFlag[]
+  teacher           Teacher?
+  student           Student?
+  parent            Parent?
+  announcements     Announcement[]
+  activityLogs      ActivityLog[] @relation("UserActivityLogs")
+  actorLogs         ActivityLog[] @relation("ActorActivityLogs")
+  alerts              Alert[]
+  alertRecipients     AlertRecipient[]
+  alertAcknowledgments AlertAcknowledgment[]
+  riskFlagsReviewed   StudentRiskFlag[]
 }
 
 model Teacher {
@@ -98,27 +114,24 @@ model Teacher {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Legacy relations (kept for display/compat — NOT security authority)
   classes          Class[]
   subjects         Subject[]
   marksGiven       Mark[]
   attendance       Attendance[]
   learningChapters LearningChapter[]
 
-  // CANONICAL: New assignment relations
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
 }
 
 model Student {
-  id         String  @id @default(uuid())
-  userId     String  @unique
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // LEGACY: Global mutable class pointer. NOT security authority.
-  // Kept for backward compat display only. Canonical class = StudentEnrollment.classId (ACTIVE)
+  id         String        @id @default(uuid())
+  userId     String        @unique
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   classId    String?
-  class      Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+  class      Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
   rollNumber String?
+  status     StudentStatus @default(ACTIVE)
 
   marks           Mark[]
   attendance      Attendance[]
@@ -126,13 +139,14 @@ model Student {
   enrollments     StudentEnrollment[]
   riskFlags       StudentRiskFlag[]
   parents         ParentStudent[]
+
+  @@index([classId])
+  @@index([status])
 }
 
 model Class {
   id        String   @id @default(uuid())
   name      String   @unique
-  // LEGACY: Global teacher FK. NOT security authority.
-  // Canonical class teacher = ClassTeacherAssignment (ACTIVE, active session)
   teacherId String?
   teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
 
@@ -144,26 +158,28 @@ model Class {
   learningChapters LearningChapter[]
   riskFlags        StudentRiskFlag[]
 
-  // CANONICAL: New assignment relations
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
+
+  @@index([teacherId])
 }
 
 model Subject {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  code      String   @unique
-  // LEGACY: Global teacher FK. NOT security authority.
-  // Canonical subject teacher = TeachingAssignment (ACTIVE, active session, specific class)
-  teacherId String?
-  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  id           String       @id @default(uuid())
+  name         String       @unique
+  code         String       @unique
+  gradingScale GradingScale @default(PERCENTAGE)
+  teacherId    String?
+  teacher      Teacher?     @relation(fields: [teacherId], references: [id], onDelete: SetNull)
 
   classes          Class[]
   marks            Mark[]
+  attendance       Attendance[]
   learningChapters LearningChapter[]
 
-  // CANONICAL: New assignment relation
   teachingAssignments TeachingAssignment[]
+
+  @@index([teacherId])
 }
 
 // ============================================================
@@ -172,10 +188,10 @@ model Subject {
 
 model Mark {
   id       String     @id @default(uuid())
-  score    Float
+  score    Float?
   maxScore Float      @default(100)
-  examType String // e.g., 'Midterm', 'Final'
-  status   MarkStatus @default(DRAFT)
+  examType String
+  status   MarkStatus @default(GRADED)
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -184,17 +200,17 @@ model Mark {
   teacherId String
   teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
 
-  // Session-scoped — FIXED: academicSessionId added to unique constraint
-  // This allows a student to have a Midterm mark in Math for both 2025 and 2026
   academicSessionId String?
   academicSession   AcademicSession? @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // FIXED: Was @@unique([studentId, subjectId, examType]) — now includes academicSessionId
-  // to prevent cross-session mark conflicts
   @@unique([studentId, subjectId, examType, academicSessionId])
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([academicSessionId])
 }
 
 // ============================================================
@@ -202,7 +218,7 @@ model Mark {
 // ============================================================
 
 model SchoolSettings {
-  id            String @id @default("default") // Singleton
+  id            String @id @default("default")
   schoolName    String @default("EduManage Academy")
   schoolAddress String @default("123 Education Lane, Learning City")
   contactNumber String @default("+1 234 567 8900")
@@ -236,7 +252,6 @@ model AcademicSession {
   learningChapters LearningChapter[]
   riskFlags        StudentRiskFlag[]
 
-  // CANONICAL: New assignment relations
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
 }
@@ -252,13 +267,13 @@ model Attendance {
   remarks String?
 
   studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  // NOTE: classId is the class at the TIME of attendance, not current Student.classId
-  // This ensures historical attendance integrity after student transfers
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   classId   String
-  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacherId String
-  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Restrict)
 
   academicSessionId String?
   academicSession   AcademicSession? @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
@@ -266,25 +281,25 @@ model Attendance {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([studentId, date])
+  @@unique([studentId, date, subjectId])
+  @@unique([studentId, date], name: "studentId_date")
+  @@index([studentId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([academicSessionId])
 }
 
 // ============================================================
-// ENROLLMENT — CANONICAL SOURCE OF TRUTH FOR ROSTER
+// ENROLLMENT
 // ============================================================
 
 model StudentEnrollment {
-  id                String @id @default(uuid())
+  id                String           @id @default(uuid())
   studentId         String
   classId           String
   academicSessionId String
-
-  // CANONICAL lifecycle status:
-  // ACTIVE     = current enrollment (the roster source of truth)
-  // TRANSFERRED = historical record when student moved classes within same session
-  // COMPLETED  = student was promoted to next session (end-of-year)
-  // INACTIVE   = student left school
-  status EnrollmentStatus @default(ACTIVE)
+  status            EnrollmentStatus @default(ACTIVE)
 
   student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
   class           Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -295,9 +310,6 @@ model StudentEnrollment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // NOTE: @@unique([studentId, academicSessionId]) is INTENTIONALLY REMOVED
-  // A student can have TRANSFERRED + ACTIVE records in the same session (transfer history)
-  // Application layer enforces: exactly ONE ACTIVE per student per session
   @@index([studentId, academicSessionId, status])
   @@index([classId, academicSessionId, status])
 }
@@ -328,7 +340,6 @@ model StudentAcademicRecord {
   publishedAt DateTime?
   finalizedAt DateTime?
 
-  // Phase D: Cryptographic Verification & Revocation Metadata
   verificationCode String?   @unique
   isRevoked        Boolean   @default(false)
   revokedAt        DateTime?
@@ -341,6 +352,9 @@ model StudentAcademicRecord {
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, academicSessionId])
+  @@index([studentId])
+  @@index([classId])
+  @@index([academicSessionId])
 }
 
 // ============================================================
@@ -351,9 +365,9 @@ model Announcement {
   id            String    @id @default(uuid())
   title         String
   content       String
-  targetRoles   String // JSON string or comma-separated e.g. "STUDENT,TEACHER"
-  targetClasses String? // Optional comma-separated list of class IDs
-  priority      String    @default("NORMAL") // "NORMAL", "HIGH"
+  targetRoles   String
+  targetClasses String?
+  priority      String    @default("NORMAL")
   expiresAt     DateTime?
 
   authorId String
@@ -361,34 +375,38 @@ model Announcement {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([authorId])
 }
 
 model ActivityLog {
-  id         String  @id @default(uuid())
-  action     String // e.g., "MARK_PUBLISHED", "ATTENDANCE_MARKED"
-  entityType String // e.g., "Mark", "Attendance", "Announcement"
-  entityId   String? // The ID of the modified entity
-  details    String? // JSON string of contextual changes
+  id           String   @id @default(uuid())
+  userId       String   @default("")
+  user         User     @relation("UserActivityLogs", fields: [userId], references: [id], onDelete: Cascade)
+  actionType   String   @default("GENERAL")
+  targetEntity String   @default("SYSTEM")
+  targetId     String   @default("")
+  oldData      String?
+  newData      String?
 
-  actorId String
-  actor   User   @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  // Preserved fields for legacy logging compatibility
+  action     String?
+  entityType String?
+  entityId   String?
+  details    String?
+  actorId    String?
+  actor      User?    @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([actorId])
 }
 
 // ============================================================
-// NEW CANONICAL ASSIGNMENT MODELS
+// ASSIGNMENT MODELS
 // ============================================================
 
-// CANONICAL: Session-scoped class teacher assignment with full lifecycle history.
-//
-// Business rule: ONE ACTIVE class teacher per class per academic session.
-// When a teacher is replaced mid-session:
-//   - Old record: isActive=false, endedAt=now()
-//   - New record: isActive=true, assignedAt=now()
-// Both records are preserved for audit/dispute/history queries.
-//
-// Application layer enforces the one-ACTIVE-per-class-per-session invariant.
 model ClassTeacherAssignment {
   id                String          @id @default(uuid())
   teacherId         String
@@ -398,31 +416,17 @@ model ClassTeacherAssignment {
   academicSessionId String
   academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
 
-  // Lifecycle — full assignment history for audit trail
   isActive   Boolean   @default(true)
   assignedAt DateTime  @default(now())
-  endedAt    DateTime? // Set when this teacher is replaced or removed
+  endedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Composite indexes for efficient active lookups
   @@index([classId, academicSessionId, isActive])
   @@index([teacherId, academicSessionId, isActive])
 }
 
-// CANONICAL: Per-subject, per-class, per-session teaching assignment with lifecycle history.
-//
-// Supports real multi-section scenarios:
-//   Teacher A → Mathematics → 10-A → 2026-27
-//   Teacher B → Mathematics → 10-B → 2026-27
-//   Teacher A → Physics → 11-A → 2026-27
-//
-// Business rule: ONE ACTIVE primary teacher per subject+class+session.
-// When a teacher changes mid-session:
-//   - Old record: isActive=false, endedAt=now()
-//   - New record: isActive=true, assignedAt=now()
-// Both records preserved for historical mark/attendance attribution.
 model TeachingAssignment {
   id                String          @id @default(uuid())
   teacherId         String
@@ -434,28 +438,24 @@ model TeachingAssignment {
   academicSessionId String
   academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
 
-  // Lifecycle — full assignment history for audit trail
+  startDate  DateTime  @default(now())
+  endDate    DateTime?
   isActive   Boolean   @default(true)
   assignedAt DateTime  @default(now())
-  endedAt    DateTime? // Set when this teacher is replaced or removed
+  endedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Composite indexes for efficient active lookups
   @@index([subjectId, classId, academicSessionId, isActive])
   @@index([teacherId, academicSessionId, isActive])
   @@index([classId, academicSessionId, isActive])
 }
 
 // ============================================================
-// LEARNING HUB — CLASS-SCOPED CONTENT
+// LEARNING HUB
 // ============================================================
 
-// FIXED: classId added to LearningChapter for content isolation between class sections.
-// Teacher A creates Math chapters for 10-A → students in 10-B do NOT see them.
-// Teacher B creates Math chapters for 10-B → students in 10-A do NOT see them.
-// NULL classId = legacy content created before this fix (treated as subject-wide, backward compat).
 model LearningChapter {
   id          String        @id @default(uuid())
   title       String
@@ -465,17 +465,12 @@ model LearningChapter {
 
   academicSessionId String
   academicSession   AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
-
-  subjectId String
-  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-
-  // NEW: Class scope — content is per class section, not global per subject
-  // NULL = legacy backward-compat (subject-wide) — treated conservatively as visible to all enrolled
-  classId String?
-  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
-
-  teacherId String
-  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  subjectId         String
+  subject           Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId           String?
+  class             Class?          @relation(fields: [classId], references: [id], onDelete: SetNull)
+  teacherId         String
+  teacher           Teacher         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
 
   topics LearningTopic[]
 
@@ -485,6 +480,7 @@ model LearningChapter {
   updatedBy String?
 
   @@index([academicSessionId, subjectId, classId])
+  @@index([teacherId])
 }
 
 model LearningTopic {
@@ -525,6 +521,8 @@ model LearningPdf {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([topicId])
 }
 
 model LearningVideo {
@@ -542,11 +540,13 @@ model LearningVideo {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([topicId])
 }
 
 model LearningExplanation {
   id      String        @id @default(uuid())
-  content String // Serialized JSON AST
+  content String
   status  ContentStatus @default(DRAFT)
 
   topicId String        @unique
@@ -560,7 +560,7 @@ model LearningExplanation {
 }
 
 // ============================================================
-// ALERT SYSTEM
+// ALERTS
 // ============================================================
 
 enum AlertPriority {
@@ -588,15 +588,17 @@ model Alert {
   creatorId String
   creator   User   @relation(fields: [creatorId], references: [id], onDelete: Restrict)
 
-  targetType String // e.g. " ALL_STUDENTS\, \ALL_TEACHERS\, \SPECIFIC_CLASSES\, \SPECIFIC_STUDENTS\
+  targetType String
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
   expiresAt   DateTime?
 
-  recipients AlertRecipient[]
+  recipients      AlertRecipient[]
+  acknowledgments AlertAcknowledgment[]
 
+  @@index([creatorId])
   @@index([status, expiresAt])
   @@index([createdAt])
 }
@@ -619,6 +621,22 @@ model AlertRecipient {
   @@index([userId, readAt])
 }
 
+model AlertAcknowledgment {
+  id String @id @default(uuid())
+
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  acknowledgedAt DateTime @default(now())
+
+  @@unique([alertId, userId])
+  @@index([alertId])
+  @@index([userId])
+}
+
 // ============================================================
 // AT-RISK STUDENT FLAGS
 // ============================================================
@@ -630,7 +648,7 @@ model StudentRiskFlag {
   academicSessionId String
   riskLevel         RiskLevel
   riskScore         Float
-  reasons           String         // JSON string array of risk triggers e.g. ["ATTENDANCE_CRITICAL", "FAILED_SUBJECTS"]
+  reasons           String
   ruleVersion       String         @default("AT_RISK_RULE_V1.0")
   status            RiskFlagStatus @default(PENDING)
   reviewNote        String?
@@ -646,10 +664,11 @@ model StudentRiskFlag {
 
   @@index([studentId, academicSessionId, status])
   @@index([classId, academicSessionId, status])
+  @@index([reviewedById])
 }
 
 // ============================================================
-// PARENT PORTAL & PARENT-STUDENT MAPPING
+// PARENT PORTAL
 // ============================================================
 
 model Parent {
@@ -666,7 +685,7 @@ model ParentStudent {
   id               String   @id @default(uuid())
   parentId         String
   studentId        String
-  relationship     String   @default("Parent") // e.g. "Father", "Mother", "Guardian"
+  relationship     String   @default("Parent")
   isPrimaryContact Boolean  @default(true)
   createdAt        DateTime @default(now())
 
@@ -677,3 +696,4 @@ model ParentStudent {
   @@index([parentId])
   @@index([studentId])
 }
+

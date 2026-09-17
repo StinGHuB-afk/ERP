@@ -47,7 +47,7 @@ export async function getPromotionEligibility(sourceClassId: string): Promise<Pr
     const totalPresent = student.attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
     const attendancePercentage = totalAttendance > 0 ? Math.round((totalPresent / totalAttendance) * 100) : 0;
 
-    const failedSubjectCount = student.marks.filter(m => (m.score / m.maxScore) * 100 < 50).length;
+    const failedSubjectCount = student.marks.filter(m => (((m.score ?? 0) / m.maxScore) * 100) < 50).length;
     const hasUnpublishedRecords = recordStatus !== "PUBLISHED" && recordStatus !== "FINALIZED";
 
     // If record is finalized, we can use its snapshot, but for evaluation, current data is fine.

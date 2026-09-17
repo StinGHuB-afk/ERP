@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { getClassTeacherAssignments } from "@/lib/auth/teacher-authorization"
 import { TeacherAttendanceTable } from "@/components/dashboard/teacher-attendance-table"
+import { AttendanceHeatmap } from "@/components/dashboard/attendance-heatmap"
 import { CalendarDays } from "lucide-react"
 
 export default async function TeacherAttendancePage(
@@ -79,10 +80,16 @@ export default async function TeacherAttendancePage(
           <CalendarDays className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Daily Attendance</h1>
-          <p className="text-slate-500 text-sm">Manage attendance for your assigned homeroom classes.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Daily Attendance Management</h1>
+          <p className="text-slate-500 text-sm">Manage student attendance telemetry and monitor term density analytics.</p>
         </div>
       </div>
+
+      {/* Interactive Semester Heatmap Analytics */}
+      <AttendanceHeatmap
+        title="Class Attendance Density Matrix"
+        subtitle="Visualizing daily class attendance percentages across the active semester"
+      />
 
       {classesWithStudents.length === 0 ? (
         <div className="rounded-xl border bg-white p-12 text-center text-slate-500 shadow-sm">

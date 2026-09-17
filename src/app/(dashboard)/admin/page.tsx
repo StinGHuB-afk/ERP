@@ -1,9 +1,23 @@
 import prisma from "@/lib/prisma"
-import { StatCard } from "@/components/dashboard/stat-card"
-import { GraduationCap, Users, BookOpen, Activity, CheckCircle, Clock, FileText } from "lucide-react"
+import { GraduationCap, Users, BookOpen, Activity, CheckCircle, Clock, FileText, LucideIcon } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { AdminCharts } from "@/components/dashboard/admin-charts"
+
+function StatCard({ title, value, subtitle, icon: Icon }: { title: string; value: string | number; subtitle?: string; icon: LucideIcon }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between">
+      <div className="flex items-center justify-between text-slate-500 mb-2">
+        <span className="text-sm font-medium text-slate-500">{title}</span>
+        <Icon className="h-4 w-4 text-slate-400" />
+      </div>
+      <div>
+        <div className="text-2xl font-semibold text-slate-900 tracking-tight">{value}</div>
+        {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+      </div>
+    </div>
+  )
+}
 
 export default async function AdminDashboard() {
   const [
@@ -35,22 +49,20 @@ export default async function AdminDashboard() {
     prisma.subject.findMany(),
   ])
 
-  // Calculate Average School Performance
   let totalScore = 0
   let totalMaxScore = 0
   allPublishedMarks.forEach((mark) => {
-    totalScore += mark.score
+    totalScore += mark.score ?? 0
     totalMaxScore += mark.maxScore
   })
   const averagePerformance = totalMaxScore > 0 ? ((totalScore / totalMaxScore) * 100).toFixed(1) : "0.0"
 
-  // Calculate subject-wise averages for chart
   const marksBySubject = subjects
     .map((sub) => {
       const subMarks = allPublishedMarks.filter((m) => m.subjectId === sub.id)
       if (subMarks.length === 0) return { name: sub.name, average: 0 }
 
-      const subTotal = subMarks.reduce((sum, m) => sum + m.score, 0)
+      const subTotal = subMarks.reduce((sum, m) => sum + (m.score ?? 0), 0)
       const subMax = subMarks.reduce((sum, m) => sum + m.maxScore, 0)
       return {
         name: sub.name,
@@ -66,13 +78,11 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
         <p className="text-xs text-slate-500 mt-0.5">Overview of academic performance and administrative operations.</p>
       </div>
 
-      {/* Primary Key Metric Cards Grid — Pure White Surfaces, Bare Icons, No Squircles */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Students"
@@ -80,21 +90,18 @@ export default async function AdminDashboard() {
           subtitle="Enrolled Student Body"
           icon={GraduationCap}
         />
-
         <StatCard
           title="Total Teachers"
           value={totalTeachers.toLocaleString()}
           subtitle="Active Faculty Members"
           icon={Users}
         />
-
         <StatCard
           title="Academic Entities"
           value={`${totalClasses} Classes`}
           subtitle={`${totalSubjects} Registered Subjects`}
           icon={BookOpen}
         />
-
         <StatCard
           title="School Avg Performance"
           value={`${averagePerformance}%`}
@@ -102,6 +109,7 @@ export default async function AdminDashboard() {
           icon={Activity}
         />
       </div>
+
 
       {/* Marks Pipeline Status — Flattened Single Surface without nested sub-cards */}
       <div className="bg-white border border-slate-200 rounded-lg p-6">

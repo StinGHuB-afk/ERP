@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { markSchema, classRosterQuerySchema } from "@/lib/validations"
 import { verifySession } from "@/lib/auth/session"
-import { logActivity } from "./logging"
+import { logActivity, verifyTeacherAccess } from "@/lib/audit"
 import { assertMarkEntryAuthorized, requireActiveSessionId } from "@/lib/auth/teacher-authorization"
 import { logSecurityEvent } from "@/lib/auth/idor-protection"
 
@@ -19,49 +19,65 @@ export interface RosterStudent {
   status: string
 }
 
-/**
- * Fetch Authorized Subject Teacher Roster
- * Joins TeachingAssignment with StudentEnrollment (status: ACTIVE) matching academicSessionId
- * instead of relying on flat student.classId fields.
- */
+async function requireTeacherSession() {
+  const session = await verifySession()
+  if (!session || !session.isAuth || session.role !== "TEACHER") return null
+  return session
+}
+
+async function getTeacherId(userId: string) {
+  const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { id: true } })
+  return teacher?.id ?? null
+}
+
+export async function getPaginatedMarks(page = 1, limit = 10, subjectId?: string, query?: string) {
+  const session = await requireTeacherSession()
+  if (!session) return { error: "Unauthorized", data: [], total: 0 }
+
+  const teacherId = await getTeacherId(session.userId)
+  if (!teacherId) return { error: "Teacher profile not found", data: [], total: 0 }
+
+  const activeSessionId = await requireActiveSessionId()
+  const where: any = {
+    teacherId,
+    academicSessionId: activeSessionId,
+    ...(subjectId && subjectId !== "all" ? { subjectId } : {}),
+    ...(query ? { student: { user: { name: { contains: query } } } } : {}),
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.mark.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: { student: { include: { user: true } }, subject: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.mark.count({ where }),
+  ])
+
+  return { success: true, data, total, page, totalPages: Math.ceil(total / limit) }
+}
+
 export async function getAuthorizedSubjectRoster(
   subjectId: string,
   classId: string
 ): Promise<{ success: boolean; roster?: RosterStudent[]; error?: string }> {
   try {
-    // 1. Verify User Session & Role (RBAC)
-    const session = await verifySession()
-    if (!session || !session.isAuth || session.role !== "TEACHER") {
-      return { success: false, error: "Unauthorized: Insufficient permissions for this resource." }
-    }
+    const session = await requireTeacherSession()
+    if (!session) return { success: false, error: "Unauthorized: Insufficient permissions for this resource." }
 
-    // 2. Validate Input Parameters
     const parseResult = classRosterQuerySchema.safeParse({ classId, subjectId })
-    if (!parseResult.success) {
-      return { success: false, error: "Invalid request parameters." }
-    }
+    if (!parseResult.success) return { success: false, error: "Invalid request parameters." }
 
-    // 3. Resolve Teacher Profile bound strictly to Session User ID
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.userId },
-      select: { id: true },
-    })
-
-    if (!teacher) {
-      return { success: false, error: "Unauthorized: Insufficient permissions for this resource." }
-    }
+    const teacherId = await getTeacherId(session.userId)
+    if (!teacherId) return { success: false, error: "Unauthorized: Insufficient permissions for this resource." }
 
     const activeSessionId = await requireActiveSessionId()
 
-    // 4. Verify Active Teaching Assignment in DB (Session-Bound IDOR Check)
     const assignment = await prisma.teachingAssignment.findFirst({
-      where: {
-        teacherId: teacher.id,
-        subjectId,
-        classId,
-        academicSessionId: activeSessionId,
-        isActive: true,
-      },
+      where: { teacherId, subjectId, classId, academicSessionId: activeSessionId, isActive: true },
+      select: { id: true },
     })
 
     if (!assignment) {
@@ -74,24 +90,10 @@ export async function getAuthorizedSubjectRoster(
       return { success: false, error: "Unauthorized: Insufficient permissions for this resource." }
     }
 
-    // 5. Query Active Students via Canonical StudentEnrollment Engine
     const enrollments = await prisma.studentEnrollment.findMany({
-      where: {
-        classId,
-        academicSessionId: activeSessionId,
-        status: "ACTIVE",
-      },
-      include: {
-        class: { select: { name: true } },
-        student: {
-          include: {
-            user: { select: { name: true, email: true } },
-          },
-        },
-      },
-      orderBy: {
-        student: { user: { name: "asc" } },
-      },
+      where: { classId, academicSessionId: activeSessionId, status: "ACTIVE" },
+      include: { class: { select: { name: true } }, student: { include: { user: { select: { name: true, email: true } } } } },
+      orderBy: { student: { user: { name: "asc" } } },
     })
 
     const roster: RosterStudent[] = enrollments.map((e) => ({
@@ -113,25 +115,16 @@ export async function getAuthorizedSubjectRoster(
 }
 
 export async function upsertMark(formData: FormData) {
-  // 1. RBAC Session Check
-  const session = await verifySession()
-  if (!session || session.role !== "TEACHER") {
-    return { error: "Unauthorized: Insufficient permissions for this resource." }
-  }
+  const session = await requireTeacherSession()
+  if (!session) return { error: "Unauthorized: Insufficient permissions for this resource." }
 
-  const data = Object.fromEntries(formData.entries())
-  const parsed = markSchema.safeParse(data)
+  const parsed = markSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const expectedSessionId = data.expectedSessionId as string | undefined;
+  const expectedSessionId = formData.get("expectedSessionId") as string | null
 
   try {
-    // 2. Resolve Teacher Profile bound strictly to Session User ID
-    const teacherUser = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { teacher: { select: { id: true } } }
-    })
-    const teacherId = teacherUser?.teacher?.id
+    const teacherId = await getTeacherId(session.userId)
     if (!teacherId) return { error: "Unauthorized: Insufficient permissions for this resource." }
 
     const activeSessionId = await requireActiveSessionId()
@@ -139,64 +132,70 @@ export async function upsertMark(formData: FormData) {
       return { error: "The active academic session has changed. Please reload the page." }
     }
 
-    // 3. IDOR Assignment Verification (3-step authorization chain)
-    try {
-      await assertMarkEntryAuthorized(
-        teacherId,
-        parsed.data.studentId,
-        parsed.data.subjectId,
-        activeSessionId
-      )
-    } catch (authError: any) {
+    const authResult = await assertMarkEntryAuthorized(teacherId, parsed.data.studentId, parsed.data.subjectId, activeSessionId).catch((err) => {
       logSecurityEvent({
         event: "IDOR_ATTEMPT",
         userId: session.userId,
         resource: `/actions/teacher/upsertMark`,
-        details: authError.message,
+        details: err.message,
       })
-      return { error: "Unauthorized: Insufficient permissions for this resource." }
-    }
-
-    // 4. Finalized Lock Check
-    const record = await prisma.studentAcademicRecord.findUnique({
-      where: { studentId_academicSessionId: { studentId: parsed.data.studentId, academicSessionId: activeSessionId } }
+      return null
     })
-    if (record?.status === "FINALIZED") {
-      return { error: "Academic record is finalized and immutable." }
-    }
 
-    // 5. Database Write
-    await prisma.mark.upsert({
+    if (!authResult) return { error: "Unauthorized: Insufficient permissions for this resource." }
+
+    // Step A: Await ABAC Guard Clause
+    await verifyTeacherAccess(session.userId, authResult.classId, parsed.data.subjectId)
+
+    const record = await prisma.studentAcademicRecord.findUnique({
+      where: { studentId_academicSessionId: { studentId: parsed.data.studentId, academicSessionId: activeSessionId } },
+      select: { status: true },
+    })
+    if (record?.status === "FINALIZED") return { error: "Academic record is finalized and immutable." }
+
+    const existingMark = await prisma.mark.findUnique({
       where: {
         studentId_subjectId_examType_academicSessionId: {
           studentId: parsed.data.studentId,
           subjectId: parsed.data.subjectId,
           examType: parsed.data.examType,
           academicSessionId: activeSessionId,
-        }
+        },
       },
-      update: {
-        score: parsed.data.score,
-        status: parsed.data.status,
+    })
+
+    const markUpsertPromise = prisma.mark.upsert({
+      where: {
+        studentId_subjectId_examType_academicSessionId: {
+          studentId: parsed.data.studentId,
+          subjectId: parsed.data.subjectId,
+          examType: parsed.data.examType,
+          academicSessionId: activeSessionId,
+        },
       },
+      update: { score: parsed.data.score, status: parsed.data.status },
       create: {
         studentId: parsed.data.studentId,
         subjectId: parsed.data.subjectId,
-        teacherId: teacherId,
+        teacherId,
         examType: parsed.data.examType,
         score: parsed.data.score,
         status: parsed.data.status,
         academicSessionId: activeSessionId,
-      }
+      },
     })
-    
-    await logActivity(
-      parsed.data.status === "PUBLISHED" ? "MARK_PUBLISHED" : "MARK_DRAFTED", 
-      "Mark", 
-      null, 
-      `Scored ${parsed.data.score} in ${parsed.data.examType}`, 
-      session.userId
-    )
+
+    const auditPromise = logActivity({
+      userId: session.userId,
+      action: parsed.data.status === "PUBLISHED" ? "MARK_PUBLISHED" : "MARK_DRAFTED",
+      target: "Mark",
+      targetId: existingMark?.id ?? `${parsed.data.studentId}_${parsed.data.subjectId}_${parsed.data.examType}`,
+      oldData: existingMark,
+      newData: { score: parsed.data.score, status: parsed.data.status },
+    })
+
+    // Step B: Wrap upsert and audit logging in a single prisma.$transaction
+    await prisma.$transaction([markUpsertPromise, auditPromise])
 
     revalidatePath("/teacher/marks")
     revalidatePath("/teacher/class", "layout")
@@ -209,73 +208,40 @@ export async function upsertMark(formData: FormData) {
 }
 
 export async function bulkUpdateMarkStatus(markIds: string[], status: "PUBLISHED" | "DRAFT") {
-  const session = await verifySession()
-  if (!session || session.role !== "TEACHER") return { error: "Unauthorized" }
-
-  if (!markIds || markIds.length === 0) {
-    return { success: true }
-  }
+  const session = await requireTeacherSession()
+  if (!session) return { error: "Unauthorized" }
+  if (!markIds || markIds.length === 0) return { success: true }
 
   try {
-    const teacherUser = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { teacher: { select: { id: true } } }
-    })
-    const teacherId = teacherUser?.teacher?.id
+    const teacherId = await getTeacherId(session.userId)
     if (!teacherId) return { error: "Teacher profile not found" }
 
     const marks = await prisma.mark.findMany({
       where: { id: { in: markIds }, teacherId },
-      select: { id: true, studentId: true }
+      select: { id: true, studentId: true },
     })
+    if (marks.length === 0) return { error: "No matching mark records found to update." }
 
-    if (marks.length === 0) {
-      return { error: "No matching mark records found to update." }
-    }
-
-    const studentIds = [...new Set(marks.map(m => m.studentId))]
-
-    const settings = await prisma.schoolSettings.findUnique({
-      where: { id: "default" },
-      select: { activeSessionId: true }
-    })
-    const activeSessionId = settings?.activeSessionId
-    
-    if (activeSessionId) {
-      const finalizedRecords = await prisma.studentAcademicRecord.count({
-        where: {
-          studentId: { in: studentIds },
-          academicSessionId: activeSessionId,
-          status: "FINALIZED"
-        }
+    const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" }, select: { activeSessionId: true } })
+    if (settings?.activeSessionId) {
+      const finalized = await prisma.studentAcademicRecord.count({
+        where: { studentId: { in: [...new Set(marks.map((m) => m.studentId))] }, academicSessionId: settings.activeSessionId, status: "FINALIZED" },
       })
-      if (finalizedRecords > 0) {
-        return { error: "Cannot bulk update marks: one or more students have finalized academic records." }
-      }
+      if (finalized > 0) return { error: "Cannot bulk update marks: one or more students have finalized academic records." }
     }
 
-    const targetMarkIds = marks.map(m => m.id)
-
-    // Execute atomic batch transaction to update all marks and log activity in a single connection
+    const targetIds = marks.map((m) => m.id)
     await prisma.$transaction([
-      prisma.mark.updateMany({
-        where: {
-          id: { in: targetMarkIds },
-          teacherId: teacherId
-        },
-        data: {
-          status: status
-        }
-      }),
+      prisma.mark.updateMany({ where: { id: { in: targetIds }, teacherId }, data: { status } }),
       prisma.activityLog.create({
         data: {
           action: status === "PUBLISHED" ? "BULK_PUBLISHED_MARKS" : "BULK_DRAFTED_MARKS",
           entityType: "Mark",
           entityId: null,
-          details: `Bulk updated ${targetMarkIds.length} marks to ${status}`,
+          details: `Bulk updated ${targetIds.length} marks to ${status}`,
           actorId: session.userId,
-        }
-      })
+        },
+      }),
     ])
 
     revalidatePath("/teacher/marks")

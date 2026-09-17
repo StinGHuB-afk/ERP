@@ -81,13 +81,7 @@ export default async function ClassTeacherPage() {
   let totalScore = 0
   let totalMaxScore = 0
 
-  const studentsWithStats = teacherClass.students.map((student: {
-    id: string;
-    rollNumber: string | null;
-    user: { name: string | null; email: string };
-    attendance: { status: string }[];
-    marks: { score: number; maxScore: number }[];
-  }) => {
+  const studentsWithStats = teacherClass.students.map((student) => {
     // Attendance
     const studentTotalAttendance = student.attendance.length
     const studentPresent = student.attendance.filter((a: { status: string }) => a.status === 'PRESENT').length
@@ -99,7 +93,7 @@ export default async function ClassTeacherPage() {
     totalPresent += studentPresent
 
     // Marks
-    const studentTotalScore = student.marks.reduce((sum: number, m: { score: number }) => sum + m.score, 0)
+    const studentTotalScore = student.marks.reduce((sum: number, m: { score: number | null }) => sum + (m.score ?? 0), 0)
     const studentTotalMax = student.marks.reduce((sum: number, m: { maxScore: number }) => sum + m.maxScore, 0)
     const studentGradePercent = studentTotalMax > 0 
       ? Math.round((studentTotalScore / studentTotalMax) * 100) 

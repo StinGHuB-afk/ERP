@@ -206,9 +206,9 @@ export async function getChildResults(studentId: string) {
       subjectName: m.subject.name,
       subjectCode: m.subject.code,
       examType: m.examType,
-      score: m.score,
+      score: m.score ?? 0,
       maxScore: m.maxScore,
-      percentage: m.maxScore > 0 ? Math.round((m.score / m.maxScore) * 100) : 0,
+      percentage: m.maxScore > 0 ? Math.round(((m.score ?? 0) / m.maxScore) * 100) : 0,
     })),
   }
 }

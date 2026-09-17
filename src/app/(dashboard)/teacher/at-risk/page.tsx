@@ -18,10 +18,10 @@ export default async function AtRiskTeacherPage() {
   if (response.error || !response.success) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-xl">
-          <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-slate-200 mb-2">Dashboard Unavailable</h2>
-          <p className="text-slate-400 text-sm">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Dashboard Unavailable</h2>
+          <p className="text-slate-500 text-sm">
             {response.error || "Unable to load student risk indicators. Please verify class assignments."}
           </p>
         </div>

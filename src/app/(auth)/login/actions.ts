@@ -5,20 +5,14 @@ import { headers } from "next/headers"
 import prisma from "@/lib/prisma"
 import { createSession, deleteSession } from "@/lib/auth/session"
 import { verifyPassword, silentRehashUserPassword } from "@/lib/auth/password-crypto"
-import {
-  checkIpRateLimit,
-  getAccountLockoutStatus,
-  recordFailedLogin,
-  clearFailedLoginAttempts,
-  delay,
-} from "@/lib/auth/rate-limiter"
+import { checkIpRateLimit, delay } from "@/lib/auth/rate-limiter"
 import { loginSchema } from "@/lib/validations"
 
 export async function login(formData: FormData) {
   const rawEmail = formData.get("email") as string
   const rawPassword = formData.get("password") as string
 
-  // 1. IP-Based Rate Limiting Check (10 requests / min window)
+  // 1. IP Rate Limit Guard
   const headerList = await headers()
   const forwardedFor = headerList.get("x-forwarded-for")
   const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1"
@@ -28,49 +22,63 @@ export async function login(formData: FormData) {
     return { error: "Too many login requests from your IP. Please wait a minute before retrying." }
   }
 
-  // 2. Input Schema Validation
+  // 2. Schema Validation
   const parsed = loginSchema.safeParse({ email: rawEmail, password: rawPassword })
-  if (!parsed.success) {
-    return { error: "Invalid email or password." }
-  }
+  if (!parsed.success) return { error: "Invalid email or password." }
 
   const { email, password } = parsed.data
 
-  // 3. Account Lockout Check (5 failed attempts = 15-minute lock)
-  const lockoutStatus = await getAccountLockoutStatus(email)
-  if (lockoutStatus.isLocked) {
-    const minutesLeft = Math.ceil(lockoutStatus.remainingLockoutMs / (60 * 1000))
-    return { error: `Account is temporarily locked due to failed attempts. Try again in ${minutesLeft} minute(s).` }
-  }
-
-  // 4. Query User Record
-  const user = await prisma.user.findUnique({
-    where: { email },
-  })
-
-  // 5. Secure Cryptographic Password Verification (Bcrypt Cost Factor 12 + Constant-Time assertion)
-  const isValid = user ? await verifyPassword(password, user.password) : false
-
-  if (!user || !isValid) {
-    const { progressiveDelayMs } = await recordFailedLogin(email)
-    // Anti-timing side-channel delay
-    await delay(Math.max(300, progressiveDelayMs))
-    // Generic error response prevents username/email enumeration
+  // 3. User Resolution
+  const user = await prisma.user.findUnique({ where: { email } })
+  if (!user) {
+    await delay(300)
     return { error: "Invalid email or password." }
   }
 
-  // 6. Reset Failed Login Count on Successful Auth
-  await clearFailedLoginAttempts(email)
+  // 4. Early Account Lockout Check Guard
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.max(1, Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000))
+    return { error: `Account is locked due to multiple failed attempts. Try again in ${minutesLeft} minute(s).` }
+  }
 
-  // 7. Silent Upgrade for Outdated Hashes (brings legacy hashes up to Bcrypt factor 12)
+  // 5. Cryptographic Password Verification
+  const isValid = await verifyPassword(password, user.password)
+
+  // 6. Handle Password Failure (Increment attempts, Lock at 5 attempts)
+  if (!isValid) {
+    const newAttempts = (user.failedLoginAttempts || 0) + 1
+    const isLocking = newAttempts >= 5
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: newAttempts,
+        lockedUntil: isLocking ? new Date(Date.now() + 15 * 60 * 1000) : null,
+      },
+    })
+
+    await delay(300)
+    return {
+      error: isLocking
+        ? "Account is now locked for 15 minutes due to 5 failed login attempts."
+        : "Invalid email or password.",
+    }
+  }
+
+  // 7. Reset Lockout & Counters on Auth Success
+  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    })
+  }
+
+  // 8. Rehash & Session Creation
   await silentRehashUserPassword(user.id, password, user.password)
-
-  // 8. Create Secure HttpOnly Session Cookie
   await createSession(user.id, user.role, user.mustChangePassword)
 
-  // 9. Role-Based Navigation
+  // 9. Navigation
   if (user.mustChangePassword) redirect("/change-password")
-
   if (user.role === "ADMIN") redirect("/admin")
   if (user.role === "TEACHER") redirect("/teacher")
   if (user.role === "STUDENT") redirect("/student")

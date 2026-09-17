@@ -47,7 +47,7 @@ export default async function StudentDashboard() {
     orderBy: { updatedAt: 'desc' }
   })
 
-  const totalScore = marks.reduce((sum, mark) => sum + mark.score, 0)
+  const totalScore = marks.reduce((sum, mark) => sum + (mark.score ?? 0), 0)
   const maxPossible = marks.reduce((sum, mark) => sum + mark.maxScore, 0)
   const percentageStr = maxPossible > 0 ? ((totalScore / maxPossible) * 100).toFixed(1) : "0.0"
   const percentage = parseFloat(percentageStr)
@@ -57,9 +57,9 @@ export default async function StudentDashboard() {
 
   const marksData = marks.map(m => ({
     subject: m.subject.name,
-    score: m.score,
+    score: m.score ?? 0,
     maxScore: m.maxScore,
-    percentage: Number(((m.score / m.maxScore) * 100).toFixed(1))
+    percentage: Number((((m.score ?? 0) / m.maxScore) * 100).toFixed(1))
   }))
 
   // Attendance logic
@@ -148,7 +148,8 @@ export default async function StudentDashboard() {
               </div>
             ) : (
               recentMarks.map(mark => {
-                const markPercentage = (mark.score / mark.maxScore) * 100;
+                const markScore = mark.score ?? 0
+                const markPercentage = (markScore / mark.maxScore) * 100;
                 let colorClass = "bg-blue-600";
                 if (markPercentage >= 80) colorClass = "bg-green-500";
                 else if (markPercentage < 50) colorClass = "bg-red-500";
@@ -157,7 +158,7 @@ export default async function StudentDashboard() {
                   <div key={mark.id} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-slate-700">{mark.subject.name}</span>
-                      <span className="text-slate-500 font-medium">{mark.score} / {mark.maxScore}</span>
+                      <span className="text-slate-500 font-medium">{markScore} / {mark.maxScore}</span>
                     </div>
                     <Progress value={markPercentage} indicatorColor={colorClass} className="h-2" />
                   </div>

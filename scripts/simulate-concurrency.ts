@@ -62,8 +62,8 @@ async function simulateStaleSession(studentId: string, subjectId: string) {
 async function simulateConcurrentAttendance(studentId: string, classId: string, expectedSessionId: string) {
   console.log("Simulating Concurrent Attendance Entry...")
   const dateStr = new Date().toISOString().split('T')[0]
-  const req1 = upsertAttendance({ studentId, classId, date: dateStr, status: "PRESENT", remarks: "", expectedSessionId })
-  const req2 = upsertAttendance({ studentId, classId, date: dateStr, status: "ABSENT", remarks: "", expectedSessionId })
+  const req1 = upsertAttendance({ studentId, classId, date: dateStr, status: "PRESENT", remarks: "", sessionId: expectedSessionId, expectedSessionId })
+  const req2 = upsertAttendance({ studentId, classId, date: dateStr, status: "ABSENT", remarks: "", sessionId: expectedSessionId, expectedSessionId })
   
   await Promise.allSettled([req1, req2, req1])
 

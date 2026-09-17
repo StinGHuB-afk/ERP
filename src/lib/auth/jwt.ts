@@ -11,7 +11,7 @@ export type SessionPayload = {
 }
 
 export async function encrypt(payload: SessionPayload) {
-  return new SignJWT(payload as any)
+  return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")

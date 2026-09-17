@@ -15,7 +15,9 @@ export async function exportAllStudents(classId?: string) {
   }
 
   const where: any = {}
-  if (classId && classId !== "all") {
+  if (classId === "unassigned") {
+    where.classId = null
+  } else if (classId && classId !== "all" && classId.trim() !== "") {
     where.classId = classId
   }
 

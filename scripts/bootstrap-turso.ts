@@ -46,7 +46,20 @@ async function bootstrap() {
       'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "verificationCode" TEXT;',
       'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "isRevoked" BOOLEAN DEFAULT 0;',
       'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "revokedAt" DATETIME;',
-      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "revokedReason" TEXT;'
+      'ALTER TABLE "StudentAcademicRecord" ADD COLUMN "revokedReason" TEXT;',
+      'ALTER TABLE "User" ADD COLUMN "failedLoginAttempts" INTEGER DEFAULT 0;',
+      'ALTER TABLE "User" ADD COLUMN "lockedUntil" DATETIME;',
+      'ALTER TABLE "Student" ADD COLUMN "status" TEXT DEFAULT \'ACTIVE\';',
+      'ALTER TABLE "TeachingAssignment" ADD COLUMN "startDate" DATETIME DEFAULT CURRENT_TIMESTAMP;',
+      'ALTER TABLE "TeachingAssignment" ADD COLUMN "endDate" DATETIME;',
+      'ALTER TABLE "Attendance" ADD COLUMN "subjectId" TEXT;',
+      'ALTER TABLE "Subject" ADD COLUMN "gradingScale" TEXT DEFAULT \'PERCENTAGE\';',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "userId" TEXT DEFAULT \'\';',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "actionType" TEXT DEFAULT \'GENERAL\';',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "targetEntity" TEXT DEFAULT \'SYSTEM\';',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "targetId" TEXT DEFAULT \'\';',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "oldData" TEXT;',
+      'ALTER TABLE "ActivityLog" ADD COLUMN "newData" TEXT;'
     ]
     for (const alterSql of alterCols) {
       try {

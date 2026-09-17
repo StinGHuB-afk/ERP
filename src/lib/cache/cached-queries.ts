@@ -4,14 +4,8 @@ import prisma from "@/lib/prisma"
 
 // ============================================================
 // 1. REACT CACHE: REQUEST-LEVEL DATA DEDUPLICATION
-// Deduplicates queries within the exact same render tree to eliminate duplicate Turso round-trips.
 // ============================================================
 
-/**
- * Deduplicated User Profile Fetcher
- * Ensures multiple components requesting user identity during the same render cycle
- * trigger only a single database query.
- */
 export const getDeduplicatedSessionUser = cache(async (userId: string) => {
   if (!userId) return null
   return prisma.user.findUnique({
@@ -28,9 +22,6 @@ export const getDeduplicatedSessionUser = cache(async (userId: string) => {
   })
 })
 
-/**
- * Deduplicated Teacher Profile Fetcher
- */
 export const getDeduplicatedTeacherProfile = cache(async (userId: string) => {
   if (!userId) return null
   return prisma.teacher.findUnique({
@@ -42,34 +33,43 @@ export const getDeduplicatedTeacherProfile = cache(async (userId: string) => {
 })
 
 // ============================================================
-// 2. UNSTABLE_CACHE: STRATEGIC ISR FOR STATIC STRUCTURAL DATA
-// Caches global metadata with 1-hour revalidation (3600s) and tag-based invalidation.
+// 2. UNSTABLE_CACHE: CACHED REPEAT REQUESTS FOR STRUCTURAL DATA
 // ============================================================
 
 /**
- * Globally Cached Subject List Query (ISR: 3600s)
+ * Globally Cached Classes Query (Revalidation Tag: 'classes-list')
+ */
+export const getCachedClasses = unstable_cache(
+  async () => {
+    return prisma.class.findMany({
+      select: { id: true, name: true, teacherId: true },
+      orderBy: { name: "asc" },
+    })
+  },
+  ["global-classes-list"],
+  {
+    revalidate: 3600,
+    tags: ["classes-list"],
+  }
+)
+
+/**
+ * Globally Cached Subjects Query (Revalidation Tag: 'subjects-list')
  */
 export const getCachedSubjects = unstable_cache(
   async () => {
     return prisma.subject.findMany({
-      select: {
-        id: true,
-        name: true,
-        code: true,
-      },
+      select: { id: true, name: true, code: true },
       orderBy: { name: "asc" },
     })
   },
   ["global-subjects-list"],
   {
-    revalidate: 3600, // Revalidate every 1 hour
-    tags: ["global-subjects"],
+    revalidate: 3600,
+    tags: ["subjects-list"],
   }
 )
 
-/**
- * Globally Cached Active Academic Session Query (ISR: 3600s)
- */
 export const getCachedActiveSession = unstable_cache(
   async () => {
     const settings = await prisma.schoolSettings.findUnique({
@@ -85,9 +85,6 @@ export const getCachedActiveSession = unstable_cache(
   }
 )
 
-/**
- * Globally Cached School Branding Settings (ISR: 3600s)
- */
 export const getCachedSchoolSettings = unstable_cache(
   async () => {
     return prisma.schoolSettings.findUnique({

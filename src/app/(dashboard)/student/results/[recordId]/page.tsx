@@ -179,14 +179,15 @@ export default async function ReportCardPage({ params }: { params: Promise<{ rec
                 </TableHeader>
                 <TableBody>
                   {marks.map((mark, idx) => {
-                    const markPercentage = (mark.score / mark.maxScore) * 100;
+                    const markScore = mark.score ?? 0
+                    const markPercentage = (markScore / mark.maxScore) * 100;
                     const markGrade = calculateGrade(markPercentage);
                     const isEven = idx % 2 === 0;
                     return (
                       <TableRow key={mark.id} className={`print:border-b print:border-slate-300 hover:bg-slate-50 ${isEven ? 'bg-white' : 'bg-slate-50/30'}`}>
                         <TableCell className="font-bold text-slate-900 py-4">{mark.subject.name}</TableCell>
                         <TableCell className="text-center font-semibold text-slate-500 py-4">{mark.maxScore}</TableCell>
-                        <TableCell className="text-center font-black text-slate-900 py-4">{mark.score}</TableCell>
+                        <TableCell className="text-center font-black text-slate-900 py-4">{markScore}</TableCell>
                         <TableCell className="text-center font-bold text-slate-700 py-4">{markPercentage.toFixed(1)}%</TableCell>
                         <TableCell className="text-center py-4">
                           <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-black ${

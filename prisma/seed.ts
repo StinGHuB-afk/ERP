@@ -3,9 +3,11 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
 import bcrypt from 'bcryptjs'
 
+const sanitize = (val?: string) => val ? val.trim().replace(/^["']|["']$/g, '') : undefined
+
 const adapter = new PrismaLibSql({
-  url: process.env.DATABASE_URL!,
-  authToken: process.env.DATABASE_AUTH_TOKEN,
+  url: sanitize(process.env.DATABASE_URL)!,
+  authToken: sanitize(process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN),
 })
 
 const prisma = new PrismaClient({ adapter })

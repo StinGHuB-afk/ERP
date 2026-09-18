@@ -1,10 +1,15 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
 
+const sanitize = (val?: string) => val ? val.trim().replace(/^["']|["']$/g, '') : undefined
+
 const prismaClientSingleton = () => {
+  const url = sanitize(process.env.DATABASE_URL)!
+  const authToken = sanitize(process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN)
+
   const adapter = new PrismaLibSql({
-    url: process.env.DATABASE_URL!,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
+    url,
+    authToken,
   })
   return new PrismaClient({ adapter })
 }

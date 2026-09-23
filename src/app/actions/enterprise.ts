@@ -171,10 +171,20 @@ export async function requestTransportChange(data: RequestTransportChangeInput) 
       if (!relation) {
         return { success: false, error: "Unauthorized: Student is not linked to your parent account." }
       }
-    } else if (session.role === "TEACHER") {
+    if (session.role === "TEACHER") {
       return { success: false, error: "Forbidden: Teachers are not authorized to submit transport requests." }
     }
     // ADMIN role passes through automatically
+
+    const existingPendingRequest = await prisma.transportChangeRequest.findFirst({
+      where: {
+        studentId: data.studentId,
+        status: TransportRequestStatus.PENDING,
+      },
+    })
+    if (existingPendingRequest) {
+      return { success: false, error: "An active transport request is already pending approval. Please wait for it to be resolved." }
+    }
 
     const currentRouteId = data.currentRouteId || student.transportAssignment?.routeId || null
     const currentRouteName = data.currentRouteName || student.transportAssignment?.routeName || null
@@ -358,7 +368,7 @@ export async function logClinicVisit(data: LogClinicVisitInput) {
 
     const student = await prisma.student.findUnique({
       where: { id: data.studentId },
-      include: { healthRecord: true },
+      include: { healthRecord: true, class: { select: { id: true, teacherId: true } } },
     })
 
     if (!student) {
@@ -392,6 +402,36 @@ export async function logClinicVisit(data: LogClinicVisitInput) {
           loggedById,
         },
       })
+
+      if (data.actionTaken === "SENT_HOME") {
+        if (!student.class?.id || !student.class?.teacherId) {
+          throw new Error("Student class or class teacher is missing, unable to automatically log attendance.")
+        }
+
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        await tx.attendance.upsert({
+          where: {
+            studentId_date: {
+              studentId: data.studentId,
+              date: today,
+            },
+          },
+          update: {
+            status: "EXCUSED",
+            remarks: "Automated by Health Module: Sent home from clinic",
+          },
+          create: {
+            studentId: data.studentId,
+            classId: student.class.id,
+            teacherId: student.class.teacherId,
+            date: today,
+            status: "EXCUSED",
+            remarks: "Automated by Health Module: Sent home from clinic",
+          },
+        })
+      }
 
       await tx.profileTimelineEvent.create({
         data: {

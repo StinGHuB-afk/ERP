@@ -153,6 +153,12 @@ export async function upsertMark(formData: FormData) {
     })
     if (record?.status === "FINALIZED") return { error: "Academic record is finalized and immutable." }
 
+    const activeSession = await prisma.academicSession.findUnique({
+      where: { id: activeSessionId },
+      select: { isMarksPublished: true },
+    })
+    if (activeSession?.isMarksPublished) return { error: "Marks for this academic session have been published and are now immutable." }
+
     const existingMark = await prisma.mark.findUnique({
       where: {
         studentId_subjectId_examType_academicSessionId: {

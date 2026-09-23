@@ -212,7 +212,62 @@ async function run() {
     console.log("ProfileUpdateRequest error:", err.message)
   }
 
-  console.log("✅ Turso database Phase 5 schema migration completed successfully!")
+  // 8. Add soft-delete and proofDocumentUrl columns
+  const newColumns = [
+    'ALTER TABLE "User" ADD COLUMN "isArchived" BOOLEAN NOT NULL DEFAULT 0;',
+    'ALTER TABLE "Student" ADD COLUMN "isArchived" BOOLEAN NOT NULL DEFAULT 0;',
+    'ALTER TABLE "Teacher" ADD COLUMN "isArchived" BOOLEAN NOT NULL DEFAULT 0;',
+    'ALTER TABLE "ProfileUpdateRequest" ADD COLUMN "proofDocumentUrl" TEXT;'
+  ]
+
+  for (const colSql of newColumns) {
+    try {
+      await client.execute(colSql)
+      console.log(`✓ Executed: ${colSql}`)
+    } catch (err: any) {
+      if (err.message?.includes("duplicate column")) {
+        // Safe to ignore
+      } else {
+        console.log(`Note on column add: ${err.message}`)
+      }
+    }
+  }
+
+  try {
+    await client.execute(`CREATE INDEX IF NOT EXISTS "User_isArchived_idx" ON "User"("isArchived");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Student_isArchived_idx" ON "Student"("isArchived");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Teacher_isArchived_idx" ON "Teacher"("isArchived");`)
+  } catch (err: any) {
+    console.log("Archive index error:", err.message)
+  }
+
+  // 9. Create SubstituteAssignment table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "SubstituteAssignment" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "substituteTeacherId" TEXT NOT NULL,
+        "classId" TEXT NOT NULL,
+        "assignedByAdminId" TEXT NOT NULL,
+        "validFrom" DATETIME NOT NULL,
+        "validUntil" DATETIME NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SubstituteAssignment_substituteTeacherId_fkey" FOREIGN KEY ("substituteTeacherId") REFERENCES "Teacher" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "SubstituteAssignment_classId_fkey" FOREIGN KEY ("classId") REFERENCES "Class" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "SubstituteAssignment_assignedByAdminId_fkey" FOREIGN KEY ("assignedByAdminId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "SubstituteAssignment_substituteTeacherId_idx" ON "SubstituteAssignment"("substituteTeacherId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "SubstituteAssignment_classId_idx" ON "SubstituteAssignment"("classId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "SubstituteAssignment_assignedByAdminId_idx" ON "SubstituteAssignment"("assignedByAdminId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "SubstituteAssignment_validFrom_validUntil_idx" ON "SubstituteAssignment"("validFrom", "validUntil");`)
+    console.log("✓ Created SubstituteAssignment table and indexes")
+  } catch (err: any) {
+    console.log("SubstituteAssignment error:", err.message)
+  }
+
+  console.log("✅ Turso database Resiliency & Substitute Delegation schema migration completed successfully!")
 }
 
 run()

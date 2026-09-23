@@ -122,23 +122,27 @@ model User {
   mustChangePassword  Boolean   @default(false)
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
+  isArchived          Boolean   @default(false)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  teacher                   Teacher?
-  student                   Student?
-  parent                    Parent?
-  announcements             Announcement[]
-  activityLogs              ActivityLog[]            @relation("UserActivityLogs")
-  actorLogs                 ActivityLog[]            @relation("ActorActivityLogs")
-  alerts                    Alert[]
-  alertRecipients           AlertRecipient[]
-  alertAcknowledgments      AlertAcknowledgment[]
-  riskFlagsReviewed         StudentRiskFlag[]
-  actorProfileEvents        ProfileTimelineEvent[]   @relation("ProfileEventActor")
-  approvedTransportRequests TransportChangeRequest[] @relation("TransportApprovals")
-  loggedClinicVisits        HealthClinicVisit[]      @relation("LoggedClinicVisits")
-  approvedProfileUpdates    ProfileUpdateRequest[]   @relation("ProfileUpdateApprovals")
+  teacher                    Teacher?
+  student                    Student?
+  parent                     Parent?
+  announcements              Announcement[]
+  activityLogs               ActivityLog[]            @relation("UserActivityLogs")
+  actorLogs                  ActivityLog[]            @relation("ActorActivityLogs")
+  alerts                     Alert[]
+  alertRecipients            AlertRecipient[]
+  alertAcknowledgments       AlertAcknowledgment[]
+  riskFlagsReviewed          StudentRiskFlag[]
+  actorProfileEvents         ProfileTimelineEvent[]   @relation("ProfileEventActor")
+  approvedTransportRequests  TransportChangeRequest[] @relation("TransportApprovals")
+  loggedClinicVisits         HealthClinicVisit[]      @relation("LoggedClinicVisits")
+  approvedProfileUpdates     ProfileUpdateRequest[]   @relation("ProfileUpdateApprovals")
+  adminSubstituteAssignments SubstituteAssignment[]   @relation("AdminSubstituteAssignments")
+
+  @@index([isArchived])
 }
 
 model Teacher {
@@ -150,15 +154,18 @@ model Teacher {
   emergencyContactRelation String?
   qualification            String?
   specialization           String?
+  isArchived               Boolean @default(false)
 
-  classes          Class[]
-  subjects         Subject[]
-  marksGiven       Mark[]
-  attendance       Attendance[]
-  learningChapters LearningChapter[]
-
+  classes                 Class[]
+  subjects                Subject[]
+  marksGiven              Mark[]
+  attendance              Attendance[]
+  learningChapters        LearningChapter[]
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
+  substituteAssignments   SubstituteAssignment[]   @relation("SubstituteTeacherAssignments")
+
+  @@index([isArchived])
 }
 
 model Student {
@@ -173,6 +180,7 @@ model Student {
   emergencyContactPhone    String?
   emergencyContactRelation String?
   behavioralFlags          String?
+  isArchived               Boolean       @default(false)
 
   marks                   Mark[]
   attendance              Attendance[]
@@ -189,6 +197,7 @@ model Student {
 
   @@index([classId])
   @@index([status])
+  @@index([isArchived])
 }
 
 model Class {
@@ -207,6 +216,7 @@ model Class {
 
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
+  substituteAssignments   SubstituteAssignment[]   @relation("ClassSubstituteAssignments")
 
   @@index([teacherId])
 }
@@ -882,6 +892,7 @@ model ProfileUpdateRequest {
   studentId          String
   student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   requestedData      String
+  proofDocumentUrl   String?
   status             ProfileUpdateStatus @default(PENDING)
   approvingTeacherId String?
   approvingTeacher   User?               @relation("ProfileUpdateApprovals", fields: [approvingTeacherId], references: [id], onDelete: SetNull)
@@ -894,4 +905,28 @@ model ProfileUpdateRequest {
   @@index([studentId])
   @@index([status])
   @@index([approvingTeacherId])
+}
+
+// ============================================================
+// SUBSTITUTE DELEGATION
+// ============================================================
+
+model SubstituteAssignment {
+  id                  String   @id @default(uuid())
+  substituteTeacherId String
+  substituteTeacher   Teacher  @relation("SubstituteTeacherAssignments", fields: [substituteTeacherId], references: [id], onDelete: Cascade)
+  classId             String
+  class               Class    @relation("ClassSubstituteAssignments", fields: [classId], references: [id], onDelete: Cascade)
+  assignedByAdminId   String
+  assignedByAdmin     User     @relation("AdminSubstituteAssignments", fields: [assignedByAdminId], references: [id], onDelete: Cascade)
+  validFrom           DateTime
+  validUntil          DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([substituteTeacherId])
+  @@index([classId])
+  @@index([assignedByAdminId])
+  @@index([validFrom, validUntil])
 }

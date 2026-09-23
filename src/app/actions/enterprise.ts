@@ -20,6 +20,7 @@ export interface RequestProfileUpdateInput {
   emergencyContactName?: string
   emergencyContactPhone?: string
   emergencyContactRelation?: string
+  proofDocumentUrl?: string
 }
 
 export interface RequestTransportChangeInput {
@@ -601,6 +602,7 @@ export async function requestProfileUpdate(data: RequestProfileUpdateInput) {
       data: {
         studentId: data.studentId,
         requestedData: JSON.stringify(payload),
+        proofDocumentUrl: data.proofDocumentUrl ? data.proofDocumentUrl.trim() : undefined,
         status: ProfileUpdateStatus.PENDING,
       },
     })

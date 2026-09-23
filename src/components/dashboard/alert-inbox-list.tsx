@@ -125,7 +125,7 @@ export function AlertInboxList({ initialAlerts }: AlertInboxListProps) {
             <p className="text-slate-700 whitespace-pre-wrap text-sm">{alert.message}</p>
             
             <div className="mt-4 flex items-center gap-4 text-xs font-medium text-slate-500 border-t pt-4">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5" suppressHydrationWarning>
                 <Clock className="h-3.5 w-3.5" />
                 {new Date(alert.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>

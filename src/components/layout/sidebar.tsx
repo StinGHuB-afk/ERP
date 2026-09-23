@@ -16,6 +16,7 @@ import {
   BellRing,
   HelpCircle,
   Settings,
+  Bus,
 } from "lucide-react"
 
 type SidebarProps = {
@@ -48,6 +49,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
               { name: "Classes", href: "/admin/classes", icon: BookOpen },
               { name: "Subjects", href: "/admin/subjects", icon: FileText },
               { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
+              { name: "Transport", href: "/admin/transport", icon: Bus },
             ],
           },
           {

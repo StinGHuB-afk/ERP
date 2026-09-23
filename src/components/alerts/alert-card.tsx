@@ -72,7 +72,7 @@ export function AlertCard({ alert, showStats = true }: AlertCardProps) {
         {/* Footer Info & Acknowledgment Progress Bar */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-slate-500 border-t border-slate-100 pt-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-1.5 text-slate-500">
+            <div className="flex items-center gap-1.5 text-slate-500" suppressHydrationWarning>
               <Clock className="h-3.5 w-3.5" />
               {new Date(alert.createdAt).toLocaleDateString("en-US", {
                 month: "short",

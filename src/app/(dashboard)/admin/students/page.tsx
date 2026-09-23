@@ -1,3 +1,4 @@
+import Link from "next/link"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,7 +14,7 @@ import { ResetPasswordButton } from "@/components/dashboard/reset-password-butto
 import { CsvUploader } from "@/components/admin/csv-uploader"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Upload } from "lucide-react"
+import { Upload, UserCheck } from "lucide-react"
 
 export default async function AdminStudentsPage(
   props: { searchParams: Promise<{ q?: string, page?: string, classId?: string }> }
@@ -143,7 +144,14 @@ export default async function AdminStudentsPage(
             ) : (
               (Array.isArray(students) ? students : []).map((student) => (
                 <TableRow key={student.id} className="hover:bg-slate-50/50">
-                  <TableCell className="font-medium text-slate-800">{student.user.name || "Unknown Student"}</TableCell>
+                  <TableCell className="font-medium text-slate-800">
+                    <Link
+                      href={`/admin/students/${student.id}`}
+                      className="font-bold text-slate-900 hover:text-blue-600 transition-colors hover:underline"
+                    >
+                      {student.user.name || "Unknown Student"}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-slate-600">{student.user.email}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-xs font-medium text-slate-700">
@@ -151,6 +159,13 @@ export default async function AdminStudentsPage(
                     </span>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-2">
+                    <Link
+                      href={`/admin/students/${student.id}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition-colors"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      360° Profile
+                    </Link>
                     <StudentHistoryDialog studentName={student.user.name || "Unknown"} enrollments={student.enrollments} />
                     <ResetPasswordButton userId={student.user.id} userName={student.user.name || "Student"} />
                     <DeleteStudentButton id={student.user.id} />

@@ -42,7 +42,7 @@ export async function RecentNotices({ role }: { role: "STUDENT" | "TEACHER" | "A
                   )}
                 </div>
                 <p className="text-xs text-slate-600 line-clamp-2 mt-1">{notice.content}</p>
-                <div className="text-[10px] text-slate-400 mt-2 font-medium">
+                <div className="text-[10px] text-slate-400 mt-2 font-medium" suppressHydrationWarning>
                   {notice.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </div>
               </div>

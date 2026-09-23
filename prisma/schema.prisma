@@ -81,38 +81,68 @@ enum RiskFlagStatus {
   DISMISSED
 }
 
+enum TransportRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransportAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum ProfileEventType {
+  ACADEMIC
+  DISCIPLINARY
+  ATTENDANCE
+  HEALTH
+  BEHAVIORAL
+  MILESTONE
+  GENERAL
+}
+
 // ============================================================
 // CORE USER MODELS
 // ============================================================
 
 model User {
-  id                  String   @id @default(uuid())
-  email               String   @unique
+  id                  String    @id @default(uuid())
+  email               String    @unique
   password            String
-  role                Role     @default(STUDENT)
+  role                Role      @default(STUDENT)
   name                String?
-  mustChangePassword  Boolean  @default(false)
-  failedLoginAttempts Int      @default(0)
+  mustChangePassword  Boolean   @default(false)
+  failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  teacher           Teacher?
-  student           Student?
-  parent            Parent?
-  announcements     Announcement[]
-  activityLogs      ActivityLog[] @relation("UserActivityLogs")
-  actorLogs         ActivityLog[] @relation("ActorActivityLogs")
-  alerts              Alert[]
-  alertRecipients     AlertRecipient[]
-  alertAcknowledgments AlertAcknowledgment[]
-  riskFlagsReviewed   StudentRiskFlag[]
+  teacher                   Teacher?
+  student                   Student?
+  parent                    Parent?
+  announcements             Announcement[]
+  activityLogs              ActivityLog[]            @relation("UserActivityLogs")
+  actorLogs                 ActivityLog[]            @relation("ActorActivityLogs")
+  alerts                    Alert[]
+  alertRecipients           AlertRecipient[]
+  alertAcknowledgments      AlertAcknowledgment[]
+  riskFlagsReviewed         StudentRiskFlag[]
+  actorProfileEvents        ProfileTimelineEvent[]   @relation("ProfileEventActor")
+  approvedTransportRequests TransportChangeRequest[] @relation("TransportApprovals")
+  loggedClinicVisits        HealthClinicVisit[]      @relation("LoggedClinicVisits")
 }
 
 model Teacher {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String  @id @default(uuid())
+  userId                   String  @unique
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+  qualification            String?
+  specialization           String?
 
   classes          Class[]
   subjects         Subject[]
@@ -125,20 +155,29 @@ model Teacher {
 }
 
 model Student {
-  id         String        @id @default(uuid())
-  userId     String        @unique
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classId    String?
-  class      Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
-  rollNumber String?
-  status     StudentStatus @default(ACTIVE)
+  id                       String        @id @default(uuid())
+  userId                   String        @unique
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classId                  String?
+  class                    Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  rollNumber               String?
+  status                   StudentStatus @default(ACTIVE)
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+  behavioralFlags          String?
 
-  marks           Mark[]
-  attendance      Attendance[]
-  academicRecords StudentAcademicRecord[]
-  enrollments     StudentEnrollment[]
-  riskFlags       StudentRiskFlag[]
-  parents         ParentStudent[]
+  marks                   Mark[]
+  attendance              Attendance[]
+  academicRecords         StudentAcademicRecord[]
+  enrollments             StudentEnrollment[]
+  riskFlags               StudentRiskFlag[]
+  parents                 ParentStudent[]
+  timelineEvents          ProfileTimelineEvent[]
+  transportAssignment     TransportAssignment?
+  transportChangeRequests TransportChangeRequest[]
+  healthRecord            HealthRecord?
+  clinicVisits            HealthClinicVisit[]
 
   @@index([classId])
   @@index([status])
@@ -380,12 +419,12 @@ model Announcement {
 }
 
 model ActivityLog {
-  id           String   @id @default(uuid())
-  userId       String   @default("")
-  user         User     @relation("UserActivityLogs", fields: [userId], references: [id], onDelete: Cascade)
-  actionType   String   @default("GENERAL")
-  targetEntity String   @default("SYSTEM")
-  targetId     String   @default("")
+  id           String  @id @default(uuid())
+  userId       String  @default("")
+  user         User    @relation("UserActivityLogs", fields: [userId], references: [id], onDelete: Cascade)
+  actionType   String  @default("GENERAL")
+  targetEntity String  @default("SYSTEM")
+  targetId     String  @default("")
   oldData      String?
   newData      String?
 
@@ -395,7 +434,7 @@ model ActivityLog {
   entityId   String?
   details    String?
   actorId    String?
-  actor      User?    @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: Cascade)
+  actor      User?   @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -697,3 +736,131 @@ model ParentStudent {
   @@index([studentId])
 }
 
+// ============================================================
+// 360° PROFILES & TIMELINE EVENTS
+// ============================================================
+
+model ProfileTimelineEvent {
+  id          String           @id @default(uuid())
+  studentId   String
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  eventType   ProfileEventType @default(GENERAL)
+  title       String
+  description String?
+  severity    String?
+  metadata    String?
+  actorId     String?
+  actor       User?            @relation("ProfileEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@index([studentId, eventType])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+// ============================================================
+// TRANSPORT STATE-MACHINE
+// ============================================================
+
+model TransportAssignment {
+  id          String                    @id @default(uuid())
+  studentId   String                    @unique
+  student     Student                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  routeId     String
+  routeName   String
+  busNumber   String
+  pickupPoint String
+  dropPoint   String
+  pickupTime  String?
+  dropTime    String?
+  status      TransportAssignmentStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([routeId])
+  @@index([busNumber])
+}
+
+model TransportChangeRequest {
+  id                   String                 @id @default(uuid())
+  studentId            String
+  student              Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  currentRouteId       String?
+  currentRouteName     String?
+  requestedRouteId     String
+  requestedRouteName   String
+  requestedBusNumber   String?
+  requestedPickupPoint String?
+  requestedDropPoint   String?
+  reason               String?
+  status               TransportRequestStatus @default(PENDING)
+
+  approvingAdminId String?
+  approvingAdmin   User?   @relation("TransportApprovals", fields: [approvingAdminId], references: [id], onDelete: SetNull)
+
+  rejectionReason String?
+  processedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@index([approvingAdminId])
+}
+
+// ============================================================
+// HEALTH & MEDICAL RECORDS
+// ============================================================
+
+model HealthRecord {
+  id                       String  @id @default(uuid())
+  studentId                String  @unique
+  student                  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  bloodGroup               String?
+  allergies                String?
+  dailyMedications         String?
+  emergencyMedicalProtocol String?
+  chronicConditions        String?
+  dietaryRestrictions      String?
+  doctorName               String?
+  doctorPhone              String?
+  insuranceProvider        String?
+  insurancePolicyNumber    String?
+
+  clinicVisits HealthClinicVisit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HealthClinicVisit {
+  id                     String       @id @default(uuid())
+  healthRecordId         String
+  healthRecord           HealthRecord @relation(fields: [healthRecordId], references: [id], onDelete: Cascade)
+  studentId              String
+  student                Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  visitDate              DateTime     @default(now())
+  reason                 String
+  symptoms               String?
+  treatmentGiven         String?
+  medicationAdministered String?
+  nurseNotes             String?
+  actionTaken            String?
+  parentNotified         Boolean      @default(false)
+  parentNotifiedAt       DateTime?
+
+  loggedById String?
+  loggedBy   User?   @relation("LoggedClinicVisits", fields: [loggedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([healthRecordId])
+  @@index([visitDate])
+  @@index([loggedById])
+}

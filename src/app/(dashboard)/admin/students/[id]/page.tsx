@@ -154,7 +154,7 @@ export default async function Student360ProfilePage(
                 Academic Profile & Enrollment
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 text-xs">
+            <CardContent className="p-5 space-y-5 text-xs">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <span className="text-slate-400 font-semibold block uppercase text-[10px]">Homeroom Class</span>
@@ -174,6 +174,63 @@ export default async function Student360ProfilePage(
                     {new Date(user.createdAt).toLocaleDateString()}
                   </span>
                 </div>
+              </div>
+
+              {/* Academic Performance & Marks Grid */}
+              <div className="border-t border-slate-100 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                    Recent Subject Marks & Assessments ({(student.marks || []).length})
+                  </h4>
+                  {student.academicRecords && student.academicRecords.length > 0 && (
+                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                      Session Overall: {student.academicRecords[0].finalPercentage !== null ? `${student.academicRecords[0].finalPercentage?.toFixed(1)}% (${student.academicRecords[0].finalGrade || "N/A"})` : "In Progress"}
+                    </Badge>
+                  )}
+                </div>
+
+                {(!student.marks || student.marks.length === 0) ? (
+                  <div className="text-center py-6 text-slate-400 text-xs border border-dashed rounded-lg bg-slate-50/50">
+                    No academic marks recorded for this student yet.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead className="text-[11px] font-bold py-2">Subject</TableHead>
+                          <TableHead className="text-[11px] font-bold py-2">Exam Type</TableHead>
+                          <TableHead className="text-[11px] font-bold py-2 text-center">Score / Max</TableHead>
+                          <TableHead className="text-[11px] font-bold py-2 text-center">Percentage</TableHead>
+                          <TableHead className="text-[11px] font-bold py-2 text-right">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(student.marks || []).map((mark) => {
+                          const pct = mark.score !== null ? ((mark.score / mark.maxScore) * 100).toFixed(1) : "N/A"
+                          return (
+                            <TableRow key={mark.id} className="hover:bg-slate-50/50">
+                              <TableCell className="py-2.5 font-bold text-slate-900">{mark.subject.name} ({mark.subject.code})</TableCell>
+                              <TableCell className="py-2.5 text-slate-600 font-medium">{mark.examType}</TableCell>
+                              <TableCell className="py-2.5 text-center font-black text-slate-800">
+                                {mark.score !== null ? mark.score : "-"} / {mark.maxScore}
+                              </TableCell>
+                              <TableCell className="py-2.5 text-center font-bold text-blue-700">
+                                {pct !== "N/A" ? `${pct}%` : "N/A"}
+                              </TableCell>
+                              <TableCell className="py-2.5 text-right">
+                                <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
+                                  {mark.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

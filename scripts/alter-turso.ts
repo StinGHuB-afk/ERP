@@ -182,13 +182,37 @@ async function run() {
     await client.execute(`CREATE INDEX IF NOT EXISTS "HealthClinicVisit_studentId_idx" ON "HealthClinicVisit"("studentId");`)
     await client.execute(`CREATE INDEX IF NOT EXISTS "HealthClinicVisit_healthRecordId_idx" ON "HealthClinicVisit"("healthRecordId");`)
     await client.execute(`CREATE INDEX IF NOT EXISTS "HealthClinicVisit_visitDate_idx" ON "HealthClinicVisit"("visitDate");`)
-    await client.execute(`CREATE INDEX IF NOT EXISTS "HealthClinicVisit_loggedById_idx" ON "HealthClinicVisit"("loggedById");`)
     console.log("✓ Created HealthClinicVisit table and indexes")
   } catch (err: any) {
     console.log("HealthClinicVisit error:", err.message)
   }
 
-  console.log("✅ Turso database Phase 1 schema migration completed successfully!")
+  // 7. Create ProfileUpdateRequest table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "ProfileUpdateRequest" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "studentId" TEXT NOT NULL,
+        "requestedData" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "approvingTeacherId" TEXT,
+        "rejectionReason" TEXT,
+        "processedAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ProfileUpdateRequest_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ProfileUpdateRequest_approvingTeacherId_fkey" FOREIGN KEY ("approvingTeacherId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "ProfileUpdateRequest_studentId_idx" ON "ProfileUpdateRequest"("studentId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "ProfileUpdateRequest_status_idx" ON "ProfileUpdateRequest"("status");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "ProfileUpdateRequest_approvingTeacherId_idx" ON "ProfileUpdateRequest"("approvingTeacherId");`)
+    console.log("✓ Created ProfileUpdateRequest table and indexes")
+  } catch (err: any) {
+    console.log("ProfileUpdateRequest error:", err.message)
+  }
+
+  console.log("✅ Turso database Phase 5 schema migration completed successfully!")
 }
 
 run()

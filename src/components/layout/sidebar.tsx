@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Settings,
   Bus,
+  UserCheck,
 } from "lucide-react"
 
 type SidebarProps = {
@@ -91,6 +92,10 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
               { name: "Enter Marks", href: "/teacher/marks", icon: FileText },
               { name: "Notes & Hub", href: "/teacher/notes", icon: BookOpen },
             ],
+          },
+          {
+            group: "People & Workflow",
+            items: [{ name: "Profile Requests", href: "/teacher/profile-requests", icon: UserCheck }],
           },
           {
             group: "Communication",

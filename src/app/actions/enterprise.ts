@@ -3,11 +3,24 @@
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
-import { ProfileEventType, TransportRequestStatus, TransportAssignmentStatus } from "@prisma/client"
+import { ProfileEventType, TransportRequestStatus, TransportAssignmentStatus, ProfileUpdateStatus } from "@prisma/client"
 
 // ============================================================
 // TYPES & INTERFACES
 // ============================================================
+
+export interface RequestedProfileData {
+  emergencyContactName?: string
+  emergencyContactPhone?: string
+  emergencyContactRelation?: string
+}
+
+export interface RequestProfileUpdateInput {
+  studentId: string
+  emergencyContactName?: string
+  emergencyContactPhone?: string
+  emergencyContactRelation?: string
+}
 
 export interface RequestTransportChangeInput {
   studentId: string
@@ -472,6 +485,19 @@ export async function getStudent360Profile(studentId: string) {
       include: {
         user: { select: { id: true, name: true, email: true, createdAt: true } },
         class: { select: { id: true, name: true } },
+        marks: {
+          include: { subject: { select: { id: true, name: true, code: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 30,
+        },
+        attendance: {
+          orderBy: { date: "desc" },
+          take: 30,
+        },
+        academicRecords: {
+          include: { academicSession: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
         healthRecord: {
           include: {
             clinicVisits: {
@@ -483,6 +509,11 @@ export async function getStudent360Profile(studentId: string) {
         },
         transportAssignment: true,
         transportChangeRequests: { orderBy: { createdAt: "desc" }, take: 5 },
+        profileUpdateRequests: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          include: { approvingTeacher: { select: { name: true, role: true } } },
+        },
         timelineEvents: {
           orderBy: { createdAt: "desc" },
           take: 25,
@@ -516,5 +547,202 @@ export async function getStudent360Profile(studentId: string) {
   } catch (error: any) {
     console.error("Error in getStudent360Profile:", error)
     return { success: false, error: error.message || "Failed to fetch student 360 profile." }
+  }
+}
+
+// ============================================================
+// PROFILE UPDATE REQUEST WORKFLOW ACTIONS
+// ============================================================
+
+/**
+ * Submits a ProfileUpdateRequest for emergency contacts or personal info.
+ * Accessible by Student (self), Parent (linked child), or Admin.
+ */
+export async function requestProfileUpdate(data: RequestProfileUpdateInput) {
+  try {
+    const session = await verifySession()
+    if (!session || !session.isAuth) {
+      return { success: false, error: "Unauthorized: Authentication required." }
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: data.studentId },
+      select: { id: true, userId: true },
+    })
+
+    if (!student) {
+      return { success: false, error: "Student profile not found." }
+    }
+
+    // RBAC check
+    if (session.role === "STUDENT") {
+      if (student.userId !== session.userId) {
+        return { success: false, error: "Unauthorized: You can only submit profile updates for yourself." }
+      }
+    } else if (session.role === "PARENT") {
+      const parent = await prisma.parent.findUnique({ where: { userId: session.userId } })
+      if (!parent) return { success: false, error: "Parent profile not found." }
+
+      const relation = await prisma.parentStudent.findUnique({
+        where: { parentId_studentId: { parentId: parent.id, studentId: data.studentId } },
+      })
+      if (!relation) {
+        return { success: false, error: "Unauthorized: Student is not linked to your parent account." }
+      }
+    }
+
+    const payload: RequestedProfileData = {
+      ...(data.emergencyContactName !== undefined && { emergencyContactName: data.emergencyContactName.trim() }),
+      ...(data.emergencyContactPhone !== undefined && { emergencyContactPhone: data.emergencyContactPhone.trim() }),
+      ...(data.emergencyContactRelation !== undefined && { emergencyContactRelation: data.emergencyContactRelation.trim() }),
+    }
+
+    const updateRequest = await prisma.profileUpdateRequest.create({
+      data: {
+        studentId: data.studentId,
+        requestedData: JSON.stringify(payload),
+        status: ProfileUpdateStatus.PENDING,
+      },
+    })
+
+    await prisma.profileTimelineEvent.create({
+      data: {
+        studentId: data.studentId,
+        eventType: ProfileEventType.BEHAVIORAL,
+        title: "Profile Edit Requested",
+        description: `Pending review for contact information updates.`,
+        actorId: session.userId,
+      },
+    })
+
+    revalidatePath(`/admin/students/${data.studentId}`)
+    revalidatePath(`/teacher/profile-requests`)
+    revalidatePath(`/student`)
+    revalidatePath(`/parent`)
+    return { success: true, data: updateRequest }
+  } catch (error: any) {
+    console.error("Error in requestProfileUpdate:", error)
+    return { success: false, error: error.message || "Failed to submit profile update request." }
+  }
+}
+
+/**
+ * Teachers or Admins action to approve or reject a pending ProfileUpdateRequest.
+ * If APPROVED, executes a prisma.$transaction to update the Student record with the strongly typed JSON payload.
+ */
+export async function processProfileUpdate(
+  requestId: string,
+  status: "APPROVED" | "REJECTED",
+  rejectionReason?: string
+) {
+  try {
+    const session = await verifySession()
+    if (!session || !session.isAuth) {
+      return { success: false, error: "Unauthorized: Authentication required." }
+    }
+
+    // RBAC: Only Teacher or Admin
+    if (session.role !== "TEACHER" && session.role !== "ADMIN") {
+      return { success: false, error: "Forbidden: Only teachers or administrators can approve profile update requests." }
+    }
+
+    const request = await prisma.profileUpdateRequest.findUnique({
+      where: { id: requestId },
+    })
+
+    if (!request) {
+      return { success: false, error: "Profile update request record not found." }
+    }
+
+    if (request.status !== ProfileUpdateStatus.PENDING) {
+      return { success: false, error: `This profile update request has already been processed with status ${request.status}.` }
+    }
+
+    const teacherUserId = session.userId
+
+    if (status === "APPROVED") {
+      // Strongly type the JSON payload parsing
+      let parsedData: RequestedProfileData = {}
+      try {
+        parsedData = JSON.parse(request.requestedData) as RequestedProfileData
+      } catch {
+        return { success: false, error: "Invalid JSON format in requested data payload." }
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Mark request as APPROVED
+        const updatedReq = await tx.profileUpdateRequest.update({
+          where: { id: requestId },
+          data: {
+            status: ProfileUpdateStatus.APPROVED,
+            approvingTeacherId: teacherUserId,
+            processedAt: new Date(),
+          },
+        })
+
+        // 2. Overwrite Student profile details with strongly typed parsed JSON data
+        const updatedStudent = await tx.student.update({
+          where: { id: request.studentId },
+          data: {
+            ...(parsedData.emergencyContactName !== undefined && { emergencyContactName: parsedData.emergencyContactName }),
+            ...(parsedData.emergencyContactPhone !== undefined && { emergencyContactPhone: parsedData.emergencyContactPhone }),
+            ...(parsedData.emergencyContactRelation !== undefined && { emergencyContactRelation: parsedData.emergencyContactRelation }),
+          },
+        })
+
+        // 3. Record chronological timeline event
+        await tx.profileTimelineEvent.create({
+          data: {
+            studentId: request.studentId,
+            eventType: ProfileEventType.MILESTONE,
+            title: "Profile Contact Information Updated",
+            description: `Approved emergency contact changes. Contact: ${parsedData.emergencyContactName || "Updated"} (${parsedData.emergencyContactPhone || "N/A"}).`,
+            actorId: teacherUserId,
+          },
+        })
+
+        return { request: updatedReq, student: updatedStudent }
+      })
+
+      revalidatePath(`/admin/students/${request.studentId}`)
+      revalidatePath(`/teacher/profile-requests`)
+      revalidatePath(`/student`)
+      revalidatePath(`/parent`)
+      return { success: true, data: result }
+    } else {
+      // Status REJECTED
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedReq = await tx.profileUpdateRequest.update({
+          where: { id: requestId },
+          data: {
+            status: ProfileUpdateStatus.REJECTED,
+            approvingTeacherId: teacherUserId,
+            rejectionReason: rejectionReason || "Request declined by school staff.",
+            processedAt: new Date(),
+          },
+        })
+
+        await tx.profileTimelineEvent.create({
+          data: {
+            studentId: request.studentId,
+            eventType: ProfileEventType.BEHAVIORAL,
+            title: "Profile Update Request Declined",
+            description: `Proposed profile edits declined. Reason: ${rejectionReason || "N/A"}`,
+            actorId: teacherUserId,
+          },
+        })
+
+        return { request: updatedReq }
+      })
+
+      revalidatePath(`/admin/students/${request.studentId}`)
+      revalidatePath(`/teacher/profile-requests`)
+      revalidatePath(`/student`)
+      revalidatePath(`/parent`)
+      return { success: true, data: result }
+    }
+  } catch (error: any) {
+    console.error("Error in processProfileUpdate:", error)
+    return { success: false, error: error.message || "Failed to process profile update request." }
   }
 }

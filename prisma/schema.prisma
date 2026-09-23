@@ -103,6 +103,12 @@ enum ProfileEventType {
   GENERAL
 }
 
+enum ProfileUpdateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ============================================================
 // CORE USER MODELS
 // ============================================================
@@ -132,6 +138,7 @@ model User {
   actorProfileEvents        ProfileTimelineEvent[]   @relation("ProfileEventActor")
   approvedTransportRequests TransportChangeRequest[] @relation("TransportApprovals")
   loggedClinicVisits        HealthClinicVisit[]      @relation("LoggedClinicVisits")
+  approvedProfileUpdates    ProfileUpdateRequest[]   @relation("ProfileUpdateApprovals")
 }
 
 model Teacher {
@@ -178,6 +185,7 @@ model Student {
   transportChangeRequests TransportChangeRequest[]
   healthRecord            HealthRecord?
   clinicVisits            HealthClinicVisit[]
+  profileUpdateRequests   ProfileUpdateRequest[]
 
   @@index([classId])
   @@index([status])
@@ -863,4 +871,27 @@ model HealthClinicVisit {
   @@index([healthRecordId])
   @@index([visitDate])
   @@index([loggedById])
+}
+
+// ============================================================
+// PROFILE UPDATE REQUESTS & APPROVAL WORKFLOW
+// ============================================================
+
+model ProfileUpdateRequest {
+  id                 String              @id @default(uuid())
+  studentId          String
+  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  requestedData      String
+  status             ProfileUpdateStatus @default(PENDING)
+  approvingTeacherId String?
+  approvingTeacher   User?               @relation("ProfileUpdateApprovals", fields: [approvingTeacherId], references: [id], onDelete: SetNull)
+  rejectionReason    String?
+  processedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@index([approvingTeacherId])
 }

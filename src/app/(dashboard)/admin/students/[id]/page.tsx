@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LogClinicVisitForm } from "@/components/forms/LogClinicVisitForm"
+import { ArchiveUserModal } from "@/components/modals/ArchiveUserModal"
 import {
   ArrowLeft,
   User,
@@ -93,6 +94,14 @@ export default async function Student360ProfilePage(
             studentName={user.name || "Student"}
             triggerText="Log Clinic Visit"
           />
+          {session.role === "ADMIN" && (
+            <ArchiveUserModal
+              userId={user.id}
+              role="STUDENT"
+              userName={user.name || "Student"}
+              redirectUrl="/admin/students"
+            />
+          )}
         </div>
       </div>
 

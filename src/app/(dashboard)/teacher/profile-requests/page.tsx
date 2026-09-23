@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ProfileRequestActions } from "./profile-request-actions"
-import { UserCheck, Clock, CheckCircle2, ShieldAlert, FileEdit } from "lucide-react"
+import { UserCheck, Clock, CheckCircle2, ShieldAlert, FileEdit, ExternalLink } from "lucide-react"
 import { RequestedProfileData } from "@/app/actions/enterprise"
 
 export default async function TeacherProfileRequestsPage() {
@@ -116,11 +116,24 @@ export default async function TeacherProfileRequestsPage() {
                       </TableCell>
 
                       <TableCell className="py-4 text-xs">
-                        <div className="p-2.5 bg-blue-50/80 rounded-lg border border-blue-100 text-blue-900 space-y-0.5">
+                        <div className="p-2.5 bg-blue-50/80 rounded-lg border border-blue-100 text-blue-900 space-y-1">
                           <div className="font-bold">{parsed.emergencyContactName || "N/A"}</div>
                           <div className="text-[11px] text-blue-700 font-medium">
                             Phone: {parsed.emergencyContactPhone || "N/A"} ({parsed.emergencyContactRelation || "N/A"})
                           </div>
+                          {req.proofDocumentUrl && (
+                            <div className="pt-1 border-t border-blue-200/60 mt-1">
+                              <a
+                                href={req.proofDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 hover:underline bg-white px-2 py-0.5 rounded border border-blue-200 shadow-xs"
+                              >
+                                <ExternalLink className="h-3 w-3 text-blue-600" />
+                                View Document Proof
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </TableCell>
 

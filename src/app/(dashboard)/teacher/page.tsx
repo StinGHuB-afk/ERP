@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, FileText, CheckCircle, Clock, AlertTriangle } from "lucide-react"
+import { BookOpen, FileText, CheckCircle, Clock, AlertTriangle, UserCheck, Calendar } from "lucide-react"
+import { getTeacherSubstituteAssignments } from "@/app/actions/substitute.actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -23,7 +24,8 @@ export default async function TeacherDashboard() {
     assignedClassesCount,
     publishedMarksCount,
     draftMarksCount,
-    recentMarks
+    recentMarks,
+    substituteRes
   ] = await Promise.all([
     prisma.subject.count({ where: { teacherId } }),
     // Classes connected via assigned subjects
@@ -38,8 +40,11 @@ export default async function TeacherDashboard() {
         student: { include: { user: true } },
         subject: true
       }
-    })
+    }),
+    getTeacherSubstituteAssignments(teacherId)
   ])
+
+  const substituteAssignments = substituteRes.success && substituteRes.data ? substituteRes.data : []
 
   return (
     <div className="space-y-8 pb-8">
@@ -167,6 +172,49 @@ export default async function TeacherDashboard() {
           <RecentNotices role="TEACHER" />
         </div>
       </div>
+
+      {/* Substitute Coverage Assignments Section */}
+      {substituteAssignments.length > 0 && (
+        <Card className="shadow-sm border-slate-200 bg-blue-50/30">
+          <CardHeader className="pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                <UserCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Temporary Substitute Assignments
+                </CardTitle>
+                <p className="text-xs text-slate-500">
+                  Classes delegated to you for temporary coverage
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3 text-xs">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {substituteAssignments.map((sub: any) => (
+                <div key={sub.id} className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-sm">{sub.class.name}</span>
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">Substitute</Badge>
+                  </div>
+                  <div className="text-slate-600 space-y-1 text-[11px]">
+                    <div className="flex items-center gap-1.5" suppressHydrationWarning>
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <span>From: {new Date(sub.validFrom).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5" suppressHydrationWarning>
+                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Until: {new Date(sub.validUntil).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

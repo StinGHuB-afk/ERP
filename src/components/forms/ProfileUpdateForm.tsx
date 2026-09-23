@@ -30,6 +30,7 @@ export function ProfileUpdateForm({
   const [emergencyContactName, setEmergencyContactName] = useState(currentName)
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(currentPhone)
   const [emergencyContactRelation, setEmergencyContactRelation] = useState(currentRelation)
+  const [proofDocumentUrl, setProofDocumentUrl] = useState("")
 
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -39,6 +40,7 @@ export function ProfileUpdateForm({
     setEmergencyContactName(currentName)
     setEmergencyContactPhone(currentPhone)
     setEmergencyContactRelation(currentRelation)
+    setProofDocumentUrl("")
     setError(null)
     setSuccessMsg(null)
   }
@@ -59,6 +61,7 @@ export function ProfileUpdateForm({
         emergencyContactName: emergencyContactName.trim(),
         emergencyContactPhone: emergencyContactPhone.trim(),
         emergencyContactRelation: emergencyContactRelation.trim() || undefined,
+        proofDocumentUrl: proofDocumentUrl.trim() || undefined,
       })
 
       if (res.success) {
@@ -156,6 +159,19 @@ export function ProfileUpdateForm({
               placeholder="e.g. Father, Mother, Guardian, Aunt"
               value={emergencyContactRelation}
               onChange={(e) => setEmergencyContactRelation(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 placeholder-slate-400"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1.5">
+              Proof Document URL <span className="text-slate-400 font-normal">(Optional, e.g. Utility Bill / ID Proof PDF)</span>
+            </label>
+            <input
+              type="url"
+              placeholder="https://example.com/documents/utility-bill.pdf"
+              value={proofDocumentUrl}
+              onChange={(e) => setProofDocumentUrl(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 placeholder-slate-400"
             />
           </div>

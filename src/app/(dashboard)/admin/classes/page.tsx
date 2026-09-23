@@ -8,6 +8,9 @@ import { PaginationControls } from "@/components/ui/pagination-controls"
 import { CsvExportButton } from "@/components/dashboard/csv-export-button"
 import { exportAllClasses } from "@/app/actions/export"
 
+import Link from "next/link"
+import { UserCheck } from "lucide-react"
+
 export default async function AdminClassesPage(
   props: { searchParams: Promise<{ q?: string, page?: string }> }
 ) {
@@ -51,6 +54,13 @@ export default async function AdminClassesPage(
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Manage Classes</h1>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/classes/substitutes"
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-md font-medium text-xs transition-colors shadow-xs inline-flex items-center gap-2"
+          >
+            <UserCheck className="w-4 h-4 text-blue-600" />
+            Manage Substitutes
+          </Link>
           <CsvExportButton
             data={exportData as Record<string, unknown>[]}
             filename="Classes_Export"

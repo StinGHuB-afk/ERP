@@ -80,87 +80,97 @@ export async function createAlert(input: CreateAlertInput) {
  * Gets the current user's alerts.
  */
 export async function getMyAlerts(filter: "ACTIVE" | "HISTORY" = "ACTIVE") {
-  const session = await verifySession()
-  if (!session) throw new Error("Not authenticated")
+  try {
+    const session = await verifySession()
+    if (!session) return []
 
-  const now = new Date()
+    const now = new Date()
 
-  const whereClause: any = {
-    userId: session.userId,
-    alert: {
-      status: { in: ["PUBLISHED", "ARCHIVED"] }
-    }
-  }
-
-  if (filter === "ACTIVE") {
-    whereClause.alert.status = "PUBLISHED"
-    whereClause.alert.OR = [
-      { expiresAt: null },
-      { expiresAt: { gt: now } }
-    ]
-  }
-
-  const recipients = await prisma.alertRecipient.findMany({
-    where: whereClause,
-    include: {
+    const whereClause: any = {
+      userId: session.userId,
       alert: {
-        include: {
-          creator: { select: { name: true, role: true } }
-        }
+        status: { in: ["PUBLISHED", "ARCHIVED"] }
       }
-    },
-    orderBy: {
-      alert: { createdAt: 'desc' }
     }
-  })
 
-  return recipients
+    if (filter === "ACTIVE") {
+      whereClause.alert.status = "PUBLISHED"
+      whereClause.alert.OR = [
+        { expiresAt: null },
+        { expiresAt: { gt: now } }
+      ]
+    }
+
+    const recipients = await prisma.alertRecipient.findMany({
+      where: whereClause,
+      include: {
+        alert: {
+          include: {
+            creator: { select: { name: true, role: true } }
+          }
+        }
+      },
+      orderBy: {
+        alert: { createdAt: 'desc' }
+      }
+    })
+
+    return recipients
+  } catch (error) {
+    console.error("getMyAlerts error:", error)
+    return []
+  }
 }
 
 /**
  * Fetches admin alerts list with aggregated metrics: totalTargets and acknowledgedCount.
  */
 export async function getAdminAlerts() {
-  const session = await verifySession()
-  if (!session) throw new Error("Not authenticated")
+  try {
+    const session = await verifySession()
+    if (!session) return []
 
-  const alerts = await prisma.alert.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      creator: { select: { name: true, role: true } },
-      recipients: {
-        select: {
-          id: true,
-          userId: true,
-          acknowledgedAt: true,
+    const alerts = await prisma.alert.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        creator: { select: { name: true, role: true } },
+        recipients: {
+          select: {
+            id: true,
+            userId: true,
+            acknowledgedAt: true,
+          },
+        },
+        acknowledgments: {
+          select: {
+            id: true,
+            userId: true,
+          },
         },
       },
-      acknowledgments: {
-        select: {
-          id: true,
-          userId: true,
-        },
-      },
-    },
-  })
+    })
 
-  return alerts.map((alert) => {
-    const ackUserIds = new Set(
-      alert.recipients
-        .filter((r) => r.acknowledgedAt !== null)
-        .map((r) => r.userId)
-        .concat(alert.acknowledgments.map((a) => a.userId))
-    )
+    return alerts.map((alert) => {
+      const ackUserIds = new Set(
+        alert.recipients
+          .filter((r) => r.acknowledgedAt !== null)
+          .map((r) => r.userId)
+          .concat(alert.acknowledgments.map((a) => a.userId))
+      )
 
-    const totalTargets = alert.recipients.length
-    const acknowledgedCount = ackUserIds.size
+      const totalTargets = alert.recipients.length
+      const acknowledgedCount = ackUserIds.size
 
-    return {
-      ...alert,
-      totalTargets,
-      acknowledgedCount,
-    }
-  })
+      return {
+        ...alert,
+        totalTargets,
+        acknowledgedCount,
+      }
+    })
+  } catch (error) {
+    console.error("getAdminAlerts error:", error)
+    return []
+  }
 }
 
 /**

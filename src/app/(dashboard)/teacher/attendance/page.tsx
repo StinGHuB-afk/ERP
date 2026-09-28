@@ -10,9 +10,10 @@ export default async function TeacherAttendancePage(
 ) {
   const searchParams = await props.searchParams
   const session = await verifySession()
-  
+  if (!session?.userId) return <div>Unauthorized</div>
+
   const teacherUser = await prisma.user.findUnique({
-    where: { id: session?.userId },
+    where: { id: session.userId },
     include: { teacher: true }
   })
   

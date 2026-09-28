@@ -3,6 +3,8 @@ import { BellRing } from "lucide-react"
 import { CreateAlertForm } from "@/components/dashboard/create-alert-form"
 import { AlertCard } from "@/components/alerts/alert-card"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminAlertsPage() {
   const alerts = await getAdminAlerts()
 

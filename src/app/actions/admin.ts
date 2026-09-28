@@ -4,12 +4,30 @@ import crypto from "crypto"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
+import { Role } from "@prisma/client"
 import { studentSchema, teacherSchema, classSchema, subjectSchema } from "@/lib/validations"
 import { verifySession } from "@/lib/auth/session"
 
+async function resolveTenantContext(overrideSchoolId?: string) {
+  const session = await verifySession()
+  if (!session) {
+    throw new Error("Unauthorized")
+  }
+
+  if (session.role === Role.SUPERADMIN) {
+    return { session, schoolId: overrideSchoolId || null }
+  }
+
+  if (!session.schoolId) {
+    throw new Error("Orphaned account: No school association found.")
+  }
+
+  return { session, schoolId: session.schoolId }
+}
+
 async function checkAdmin() {
   const session = await verifySession()
-  return session?.role === "ADMIN"
+  return session?.role === Role.ADMIN || session?.role === Role.SUPERADMIN
 }
 
 async function getActiveSessionId() {
@@ -17,8 +35,58 @@ async function getActiveSessionId() {
   return settings?.activeSessionId
 }
 
+export async function getClasses(schoolId?: string) {
+  const { schoolId: targetSchoolId } = await resolveTenantContext(schoolId)
+
+  return prisma.class.findMany({
+    where: targetSchoolId ? { schoolId: targetSchoolId } : {},
+    include: {
+      teacher: {
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
+        },
+      },
+      _count: {
+        select: { students: true, subjects: true },
+      },
+    },
+    orderBy: { name: "asc" },
+  })
+}
+
+export async function getStudents(schoolId?: string) {
+  const { schoolId: targetSchoolId } = await resolveTenantContext(schoolId)
+
+  return prisma.student.findMany({
+    where: targetSchoolId ? { user: { schoolId: targetSchoolId } } : {},
+    include: {
+      user: true,
+      class: true,
+      enrollments: {
+        include: { academicSession: true, class: true },
+        orderBy: { academicSession: { startDate: "desc" } },
+      },
+    },
+    orderBy: { user: { name: "asc" } },
+  })
+}
+
 export async function createStudent(formData: FormData) {
-  if (!(await checkAdmin())) return { error: "Unauthorized" }
+  const session = await verifySession()
+  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+    return { error: "Unauthorized" }
+  }
+
+  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
+    return { error: "Orphaned account: No school association found." }
+  }
+
+  const schoolId = session.role === Role.SUPERADMIN
+    ? (formData.get("schoolId") as string) || session.schoolId || null
+    : session.schoolId
+
   const parsed = studentSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -28,13 +96,20 @@ export async function createStudent(formData: FormData) {
 
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email: parsed.data.email, name: parsed.data.name, password, role: "STUDENT", mustChangePassword: true }
+        data: {
+          email: parsed.data.email,
+          name: parsed.data.name,
+          password,
+          role: Role.STUDENT,
+          mustChangePassword: true,
+          schoolId,
+        },
       })
       const student = await tx.student.create({ data: { userId: user.id, classId: parsed.data.classId } })
 
       if (activeSessionId && parsed.data.classId) {
         await tx.studentEnrollment.create({
-          data: { studentId: student.id, classId: parsed.data.classId, academicSessionId: activeSessionId }
+          data: { studentId: student.id, classId: parsed.data.classId, academicSessionId: activeSessionId },
         })
       }
     })
@@ -46,7 +121,19 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function createTeacher(formData: FormData) {
-  if (!(await checkAdmin())) return { error: "Unauthorized" }
+  const session = await verifySession()
+  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+    return { error: "Unauthorized" }
+  }
+
+  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
+    return { error: "Orphaned account: No school association found." }
+  }
+
+  const schoolId = session.role === Role.SUPERADMIN
+    ? (formData.get("schoolId") as string) || session.schoolId || null
+    : session.schoolId
+
   const parsed = teacherSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -54,7 +141,14 @@ export async function createTeacher(formData: FormData) {
     const password = await bcrypt.hash("Teacher@12345", 10)
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email: parsed.data.email, name: parsed.data.name, password, role: "TEACHER", mustChangePassword: true }
+        data: {
+          email: parsed.data.email,
+          name: parsed.data.name,
+          password,
+          role: Role.TEACHER,
+          mustChangePassword: true,
+          schoolId,
+        },
       })
       await tx.teacher.create({ data: { userId: user.id } })
     })
@@ -66,12 +160,30 @@ export async function createTeacher(formData: FormData) {
 }
 
 export async function createClass(formData: FormData) {
-  if (!(await checkAdmin())) return { error: "Unauthorized" }
+  const session = await verifySession()
+  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+    return { error: "Unauthorized" }
+  }
+
+  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
+    return { error: "Orphaned account: No school association found." }
+  }
+
+  const schoolId = session.role === Role.SUPERADMIN
+    ? (formData.get("schoolId") as string) || session.schoolId || null
+    : session.schoolId
+
   const parsed = classSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   try {
-    await prisma.class.create({ data: { name: parsed.data.name, teacherId: parsed.data.teacherId || null } })
+    await prisma.class.create({
+      data: {
+        name: parsed.data.name,
+        teacherId: parsed.data.teacherId || null,
+        schoolId,
+      },
+    })
     revalidatePath("/admin/classes")
     return { success: true }
   } catch {
@@ -85,7 +197,13 @@ export async function createSubject(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   try {
-    await prisma.subject.create({ data: { name: parsed.data.name, code: parsed.data.code, teacherId: parsed.data.teacherId || null } })
+    await prisma.subject.create({
+      data: {
+        name: parsed.data.name,
+        code: parsed.data.code,
+        teacherId: parsed.data.teacherId || null,
+      },
+    })
     revalidatePath("/admin/subjects")
     return { success: true }
   } catch {
@@ -129,13 +247,13 @@ export async function assignClassTeacher(teacherId: string, classId: string) {
     await prisma.$transaction([
       prisma.classTeacherAssignment.updateMany({
         where: { OR: [{ classId }, { teacherId }], academicSessionId: activeSessionId, isActive: true },
-        data: { isActive: false, endedAt: new Date() }
+        data: { isActive: false, endedAt: new Date() },
       }),
       prisma.classTeacherAssignment.create({
-        data: { teacherId, classId, academicSessionId: activeSessionId, isActive: true }
+        data: { teacherId, classId, academicSessionId: activeSessionId, isActive: true },
       }),
       prisma.class.updateMany({ where: { teacherId }, data: { teacherId: null } }),
-      prisma.class.update({ where: { id: classId }, data: { teacherId } })
+      prisma.class.update({ where: { id: classId }, data: { teacherId } }),
     ])
 
     revalidatePath("/admin/teachers")
@@ -171,11 +289,11 @@ export async function createTeachingAssignment(teacherId: string, subjectId: str
     await prisma.$transaction([
       prisma.teachingAssignment.updateMany({
         where: { subjectId, classId, academicSessionId: activeSessionId, isActive: true },
-        data: { isActive: false, endedAt: new Date() }
+        data: { isActive: false, endedAt: new Date() },
       }),
       prisma.teachingAssignment.create({
-        data: { teacherId, subjectId, classId, academicSessionId: activeSessionId, isActive: true }
-      })
+        data: { teacherId, subjectId, classId, academicSessionId: activeSessionId, isActive: true },
+      }),
     ])
 
     revalidatePath("/admin/teachers")
@@ -203,14 +321,14 @@ export async function transferStudent(studentId: string, newClassId: string) {
 
   try {
     const current = await prisma.studentEnrollment.findFirst({
-      where: { studentId, academicSessionId: activeSessionId, status: "ACTIVE" }
+      where: { studentId, academicSessionId: activeSessionId, status: "ACTIVE" },
     })
     if (current?.classId === newClassId) return { error: "Student is already in this class." }
 
     await prisma.$transaction([
       ...(current ? [prisma.studentEnrollment.update({ where: { id: current.id }, data: { status: "TRANSFERRED" } })] : []),
       prisma.studentEnrollment.create({ data: { studentId, classId: newClassId, academicSessionId: activeSessionId, status: "ACTIVE" } }),
-      prisma.student.update({ where: { id: studentId }, data: { classId: newClassId } })
+      prisma.student.update({ where: { id: studentId }, data: { classId: newClassId } }),
     ])
 
     revalidatePath("/admin/students")

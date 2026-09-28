@@ -7,6 +7,7 @@ import { createSession, deleteSession } from "@/lib/auth/session"
 import { verifyPassword, silentRehashUserPassword } from "@/lib/auth/password-crypto"
 import { checkIpRateLimit, delay } from "@/lib/auth/rate-limiter"
 import { loginSchema } from "@/lib/validations"
+import { Role } from "@prisma/client"
 
 export async function login(formData: FormData) {
   const rawEmail = formData.get("email") as string
@@ -75,14 +76,15 @@ export async function login(formData: FormData) {
 
   // 8. Rehash & Session Creation
   await silentRehashUserPassword(user.id, password, user.password)
-  await createSession(user.id, user.role, user.mustChangePassword)
+  await createSession(user.id, user.role, user.mustChangePassword, user.schoolId)
 
   // 9. Navigation
   if (user.mustChangePassword) redirect("/change-password")
-  if (user.role === "ADMIN") redirect("/admin")
-  if (user.role === "TEACHER") redirect("/teacher")
-  if (user.role === "STUDENT") redirect("/student")
-  if (user.role === "PARENT") redirect("/parent")
+  if (user.role === Role.SUPERADMIN) redirect("/superadmin")
+  if (user.role === Role.ADMIN) redirect("/admin")
+  if (user.role === Role.TEACHER) redirect("/teacher")
+  if (user.role === Role.STUDENT) redirect("/student")
+  if (user.role === Role.PARENT) redirect("/parent")
 
   redirect("/")
 }

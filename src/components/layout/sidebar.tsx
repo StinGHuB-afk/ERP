@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Role } from "@prisma/client"
 import {
   LayoutDashboard,
   Users,
@@ -18,10 +19,11 @@ import {
   Settings,
   Bus,
   UserCheck,
+  Shield,
 } from "lucide-react"
 
 type SidebarProps = {
-  role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
+  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
   schoolName: string
   isClassTeacher?: boolean
 }
@@ -31,7 +33,48 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
 
   const getGroupedLinks = () => {
     switch (role) {
+      case "SUPERADMIN":
+      case Role.SUPERADMIN:
+        return [
+          {
+            group: "Overview",
+            items: [
+              { name: "SuperAdmin Hub", href: "/superadmin", icon: Shield },
+              { name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard },
+            ],
+          },
+          {
+            group: "SaaS Management",
+            items: [
+              { name: "Schools", href: "/superadmin/schools", icon: Building2 },
+            ],
+          },
+          {
+            group: "Academics",
+            items: [
+              { name: "Classes", href: "/admin/classes", icon: BookOpen },
+              { name: "Subjects", href: "/admin/subjects", icon: FileText },
+              { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
+              { name: "Transport", href: "/admin/transport", icon: Bus },
+            ],
+          },
+          {
+            group: "People",
+            items: [
+              { name: "Teachers", href: "/admin/teachers", icon: Users },
+              { name: "Students", href: "/admin/students", icon: GraduationCap },
+            ],
+          },
+          {
+            group: "System",
+            items: [
+              { name: "Activity Log", href: "/admin/activity", icon: Activity },
+              { name: "Settings", href: "/admin/settings", icon: Building2 },
+            ],
+          },
+        ]
       case "PARENT":
+      case Role.PARENT:
         return [
           {
             group: "Overview",
@@ -39,6 +82,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
           },
         ]
       case "ADMIN":
+      case Role.ADMIN:
         return [
           {
             group: "Overview",
@@ -76,6 +120,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
           },
         ]
       case "TEACHER":
+      case Role.TEACHER:
         return [
           {
             group: "Overview",
@@ -103,6 +148,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
           },
         ]
       case "STUDENT":
+      case Role.STUDENT:
         return [
           {
             group: "Overview",
@@ -129,7 +175,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
 
   return (
     <div className="flex h-full w-full flex-col bg-white text-slate-900 border-r border-slate-200">
-      {/* Brand Header — Bare Icon, No Squircle Container */}
+      {/* Brand Header */}
       <div className="flex h-14 items-center border-b border-slate-200 px-5">
         <Link href="/" className="flex items-center gap-2.5 font-bold text-base tracking-tight text-slate-900 hover:text-blue-600 transition-colors">
           <GraduationCap className="h-5 w-5 text-blue-600 flex-shrink-0" />
@@ -137,7 +183,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
         </Link>
       </div>
 
-      {/* Navigation Body — Bare Icons, Clean Hover States */}
+      {/* Navigation Body */}
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="grid items-start px-3 text-xs font-medium space-y-5">
           {groupedNav.map((section) => (
@@ -148,7 +194,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
               <div className="space-y-0.5">
                 {section.items.map((link) => {
                   const Icon = link.icon
-                  const isActive = pathname === link.href || (link.href !== "/admin" && link.href !== "/teacher" && link.href !== "/student" && link.href !== "/parent" && pathname.startsWith(link.href))
+                  const isActive = pathname === link.href || (link.href !== "/admin" && link.href !== "/teacher" && link.href !== "/student" && link.href !== "/parent" && link.href !== "/superadmin" && pathname.startsWith(link.href))
 
                   return (
                     <Link
@@ -177,10 +223,10 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Bottom Utility Footer — Inline Links (Replaces Floating Action Buttons) */}
+      {/* Bottom Utility Footer */}
       <div className="border-t border-slate-200 p-3 space-y-0.5 text-xs">
         <Link
-          href={role === "ADMIN" ? "/admin/settings" : "#"}
+          href={role === Role.ADMIN || role === Role.SUPERADMIN ? "/admin/settings" : "#"}
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
         >
           <Settings className="h-4 w-4 text-slate-400" />

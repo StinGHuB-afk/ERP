@@ -7,17 +7,24 @@ import { verifySession } from "@/lib/auth/session"
 import { requireActiveSessionId } from "@/lib/auth/teacher-authorization"
 import { Badge } from "@/components/ui/badge"
 
+export const dynamic = "force-dynamic"
+
 export default async function TeacherAlertsPage() {
   const session = await verifySession()
-  const academicSessionId = await requireActiveSessionId()
-  
   if (!session) return null;
+
+  let academicSessionId: string | null = null
+  try {
+    academicSessionId = await requireActiveSessionId()
+  } catch {
+    academicSessionId = null
+  }
 
   // Fetch teacher to get ID
   const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId } })
   
   let assignedClasses: { id: string, name: string }[] = []
-  if (teacher) {
+  if (teacher && academicSessionId) {
     const assignments = await prisma.classTeacherAssignment.findMany({
       where: { teacherId: teacher.id, academicSessionId, isActive: true },
       include: { class: true }

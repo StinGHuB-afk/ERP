@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { LogOut, User as UserIcon, BellRing } from "lucide-react"
 import { logout } from "@/app/(auth)/login/actions"
 import { MobileNav } from "./mobile-nav"
-
+import { Role } from "@prisma/client"
 import { SessionSwitcher, AcademicSessionOption } from "./session-switcher"
 
 export function Header({
@@ -19,7 +19,7 @@ export function Header({
   unreadAlertsCount = 0,
 }: {
   userName: string | null
-  role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
+  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
   academicSession: string
   sessions?: AcademicSessionOption[]
   currentSessionId?: string
@@ -44,7 +44,7 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Unread Alerts Link — Bare Icon, No Shadows */}
+        {/* Unread Alerts Link */}
         <Link
           href={alertHref}
           className="relative p-1.5 text-slate-500 hover:text-slate-900 transition-colors rounded-md hover:bg-slate-100"
@@ -58,7 +58,7 @@ export function Header({
 
         <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-        {/* User Identity Info — Bare Text, No Squircle Container */}
+        {/* User Identity Info */}
         <div className="flex items-center gap-2">
           <UserIcon className="h-4 w-4 text-slate-500 flex-shrink-0" />
           <div className="flex flex-col text-left">

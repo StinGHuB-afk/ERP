@@ -1,0 +1,39 @@
+# Project Standards and AI Engineering Rules
+
+These rules govern the architecture, backend, frontend, and database implementations for the School ERP project.
+
+## Core Tech Stack (DO NOT OVERRIDE)
+- **Framework**: Next.js 15+ (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4, shadcn/ui
+- **Backend**: Next.js Server Actions
+- **Database**: Prisma ORM + Turso (libSQL/SQLite) with local `dev.db` sync
+
+## 1. AI Engineering Golden Rules
+- **No Placeholder Code**: Never generate fake data, `TODO` implementations, or pretend an operation succeeded without actually executing and verifying it.
+- **Verification over Generation**: "Implemented" and "Verified" are different states. Always ensure code compiles after modifications.
+- **Scope Control**: Modify only what is strictly necessary for the current task. Do not rewrite unrelated modules or force premature microservices/abstractions.
+
+## 2. Backend & Server Actions (The Authority)
+- **Strict Client/Server Separation**: Server Actions are the authoritative execution layer. Keep complex business logic out of client components.
+- **Top-Level RBAC**: Every protected server action must validate authentication and authorization (Role-Based Access Control) *before* any other logic executes.
+- **Input Validation**: Never trust the frontend. Validate all input on the server before processing.
+- **Atomic Transactions**: Use atomic `prisma.$transaction` for all cross-table writes. Never leave partial data states.
+- **Flat Cyclomatic Complexity**: Keep server logic flat, readable, and early-returning. Avoid deep nesting.
+- **Safe Failures**: Handle errors gracefully. Never expose internal stack traces or raw database errors to the frontend.
+- **Soft Deletes**: Use soft-delete patterns for important domain entities instead of physical destruction.
+
+## 3. Database Architecture (Prisma + Turso/SQLite)
+- **SQLite Compatibility**: Ensure queries and schema designs are compatible with Turso (libSQL/SQLite). Ignore rules intended for PostgreSQL (e.g., native enums, arrays).
+- **Concurrency & Idempotency**: Design data mutations to handle duplicate submissions safely.
+- **Migrations**: Always verify the schema against `dev.db` and use appropriate migration workflows.
+
+## 4. Frontend Rules (Next.js App Router)
+- **Server Components by Default**: Follow Next.js App Router paradigms strictly. Use Server Components by default; explicitly mark `use client` only where browser interaction or state is required.
+- **Enterprise Design Aesthetics**: Prioritize information hierarchy, clarity, scanability, and speed. Avoid consumer-app patterns (e.g., excessive glassmorphism, decorative animations, large rounded cards).
+- **Hydration Safety**: Ensure no mismatch between server-rendered HTML and client hydration.
+- **Accurate Error States**: Provide actionable error states and loading skeletons. Do not show a "success" toast if the backend mutation failed.
+- **No Fake UI**: Do not invent statistics, users, or system behaviors just to populate an empty state.
+
+## 5. Destructive Operations & Data Safety
+- Ask for explicit human approval before: dropping databases, modifying production schemas destructively, removing major functionality, or overwriting production data.

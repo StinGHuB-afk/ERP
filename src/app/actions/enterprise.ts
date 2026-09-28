@@ -171,6 +171,7 @@ export async function requestTransportChange(data: RequestTransportChangeInput) 
       if (!relation) {
         return { success: false, error: "Unauthorized: Student is not linked to your parent account." }
       }
+    }
     if (session.role === "TEACHER") {
       return { success: false, error: "Forbidden: Teachers are not authorized to submit transport requests." }
     }

@@ -4,7 +4,12 @@ import { decrypt } from '@/lib/auth/jwt'
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
-  const isProtectedRoute = path.startsWith('/admin') || path.startsWith('/teacher') || path.startsWith('/student') || path.startsWith('/parent')
+  const isProtectedRoute =
+    path.startsWith('/superadmin') ||
+    path.startsWith('/admin') ||
+    path.startsWith('/teacher') ||
+    path.startsWith('/student') ||
+    path.startsWith('/parent')
 
   const sessionCookie = request.cookies.get("session")?.value
 
@@ -20,13 +25,16 @@ export async function proxy(request: NextRequest) {
     }
 
     // Role-based route protection
-    if (path.startsWith('/admin') && payload.role !== 'ADMIN') {
+    if (path.startsWith('/superadmin') && payload.role !== 'SUPERADMIN') {
       return NextResponse.redirect(new URL("/login", request.url), 307)
     }
-    if (path.startsWith('/teacher') && payload.role !== 'TEACHER' && payload.role !== 'ADMIN') {
+    if (path.startsWith('/admin') && payload.role !== 'ADMIN' && payload.role !== 'SUPERADMIN') {
       return NextResponse.redirect(new URL("/login", request.url), 307)
     }
-    if (path.startsWith('/student') && payload.role !== 'STUDENT' && payload.role !== 'ADMIN') {
+    if (path.startsWith('/teacher') && payload.role !== 'TEACHER' && payload.role !== 'ADMIN' && payload.role !== 'SUPERADMIN') {
+      return NextResponse.redirect(new URL("/login", request.url), 307)
+    }
+    if (path.startsWith('/student') && payload.role !== 'STUDENT' && payload.role !== 'ADMIN' && payload.role !== 'SUPERADMIN') {
       return NextResponse.redirect(new URL("/login", request.url), 307)
     }
 
@@ -55,10 +63,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/superadmin/:path*',
     '/admin/:path*',
     '/teacher/:path*',
     '/student/:path*',
     '/parent/:path*',
   ],
 }
-

@@ -2,6 +2,8 @@ import { BellRing } from "lucide-react"
 import { getMyAlerts } from "@/app/actions/alert"
 import { AlertInboxList } from "@/components/dashboard/alert-inbox-list"
 
+export const dynamic = "force-dynamic"
+
 export default async function StudentAlertsPage() {
   const activeAlerts = await getMyAlerts("ACTIVE")
 

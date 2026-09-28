@@ -49,4 +49,5 @@ backup-pre-phase3.json
 .tmp-*
 temp_schema_check/
 test-results/
+AI-Engineering-Workspace/
 

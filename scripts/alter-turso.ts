@@ -267,7 +267,129 @@ async function run() {
     console.log("SubstituteAssignment error:", err.message)
   }
 
-  console.log("✅ Turso database Resiliency & Substitute Delegation schema migration completed successfully!")
+  // 10. Create TimetablePeriod table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "TimetablePeriod" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "classId" TEXT NOT NULL,
+        "subjectId" TEXT NOT NULL,
+        "teacherId" TEXT NOT NULL,
+        "dayOfWeek" TEXT NOT NULL,
+        "startTime" TEXT NOT NULL,
+        "endTime" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "TimetablePeriod_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "TimetablePeriod_classId_fkey" FOREIGN KEY ("classId") REFERENCES "Class" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "TimetablePeriod_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "TimetablePeriod_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "Teacher" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TimetablePeriod_schoolId_idx" ON "TimetablePeriod"("schoolId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TimetablePeriod_classId_idx" ON "TimetablePeriod"("classId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TimetablePeriod_subjectId_idx" ON "TimetablePeriod"("subjectId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TimetablePeriod_teacherId_idx" ON "TimetablePeriod"("teacherId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TimetablePeriod_dayOfWeek_idx" ON "TimetablePeriod"("dayOfWeek");`)
+    console.log("✓ Created TimetablePeriod table and indexes")
+  } catch (err: any) {
+    console.log("TimetablePeriod error:", err.message)
+  }
+
+  // 11. Create Assignment table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "Assignment" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "classId" TEXT NOT NULL,
+        "subjectId" TEXT NOT NULL,
+        "teacherId" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "description" TEXT,
+        "dueDate" DATETIME NOT NULL,
+        "maxMarks" REAL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Assignment_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Assignment_classId_fkey" FOREIGN KEY ("classId") REFERENCES "Class" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Assignment_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Assignment_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "Teacher" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Assignment_schoolId_idx" ON "Assignment"("schoolId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Assignment_classId_idx" ON "Assignment"("classId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Assignment_subjectId_idx" ON "Assignment"("subjectId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Assignment_teacherId_idx" ON "Assignment"("teacherId");`)
+    console.log("✓ Created Assignment table and indexes")
+  } catch (err: any) {
+    console.log("Assignment error:", err.message)
+  }
+
+  // 12. Create AssignmentSubmission table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "AssignmentSubmission" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "assignmentId" TEXT NOT NULL,
+        "studentId" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "contentUrl" TEXT,
+        "marksObtained" REAL,
+        "feedback" TEXT,
+        "submittedAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AssignmentSubmission_assignmentId_fkey" FOREIGN KEY ("assignmentId") REFERENCES "Assignment" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "AssignmentSubmission_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "AssignmentSubmission_assignmentId_studentId_key" ON "AssignmentSubmission"("assignmentId", "studentId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AssignmentSubmission_assignmentId_idx" ON "AssignmentSubmission"("assignmentId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AssignmentSubmission_studentId_idx" ON "AssignmentSubmission"("studentId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AssignmentSubmission_status_idx" ON "AssignmentSubmission"("status");`)
+    console.log("✓ Created AssignmentSubmission table and indexes")
+  } catch (err: any) {
+    console.log("AssignmentSubmission error:", err.message)
+  }
+
+  // 13. Create AdmissionEnquiry table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "AdmissionEnquiry" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "referenceNumber" TEXT NOT NULL UNIQUE,
+        "studentFirstName" TEXT NOT NULL,
+        "studentLastName" TEXT NOT NULL,
+        "dateOfBirth" DATETIME NOT NULL,
+        "appliedForClassId" TEXT NOT NULL,
+        "parentName" TEXT NOT NULL,
+        "parentEmail" TEXT NOT NULL,
+        "parentPhone" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "documentUrl" TEXT,
+        "adminNotes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AdmissionEnquiry_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "AdmissionEnquiry_appliedForClassId_fkey" FOREIGN KEY ("appliedForClassId") REFERENCES "Class" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "AdmissionEnquiry_referenceNumber_key" ON "AdmissionEnquiry"("referenceNumber");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AdmissionEnquiry_schoolId_idx" ON "AdmissionEnquiry"("schoolId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AdmissionEnquiry_appliedForClassId_idx" ON "AdmissionEnquiry"("appliedForClassId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AdmissionEnquiry_status_idx" ON "AdmissionEnquiry"("status");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "AdmissionEnquiry_referenceNumber_idx" ON "AdmissionEnquiry"("referenceNumber");`)
+    console.log("✓ Created AdmissionEnquiry table and indexes")
+  } catch (err: any) {
+    console.log("AdmissionEnquiry error:", err.message)
+  }
+
+  console.log("✅ Turso database Online Admissions schema migration completed successfully!")
 }
 
 run()
+
+

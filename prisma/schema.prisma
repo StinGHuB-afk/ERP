@@ -12,6 +12,7 @@ datasource db {
 // ============================================================
 
 enum Role {
+  SUPERADMIN
   ADMIN
   TEACHER
   STUDENT
@@ -109,6 +110,72 @@ enum ProfileUpdateStatus {
   REJECTED
 }
 
+enum TransactionType {
+  FEE_PAYMENT
+  SALARY_PAYOUT
+  FINE
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  MATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AssetCategory {
+  BOOK
+  LAPTOP
+  SPORTS_EQUIPMENT
+  ELECTRONICS
+  FURNITURE
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  LOST
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+  LATE
+}
+
+enum AdmissionStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
 // ============================================================
 // CORE USER MODELS
 // ============================================================
@@ -123,6 +190,10 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
   isArchived          Boolean   @default(false)
+
+  schoolId            String?
+  school              School?   @relation(fields: [schoolId], references: [id])
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -141,8 +212,13 @@ model User {
   loggedClinicVisits         HealthClinicVisit[]      @relation("LoggedClinicVisits")
   approvedProfileUpdates     ProfileUpdateRequest[]   @relation("ProfileUpdateApprovals")
   adminSubstituteAssignments SubstituteAssignment[]   @relation("AdminSubstituteAssignments")
+  transactions               Transaction[]
+  leaveRequests              LeaveRequest[]           @relation("UserLeaveRequests")
+  reviewedLeaves             LeaveRequest[]           @relation("LeaveReviewer")
+  assignedAssets             Asset[]
 
   @@index([isArchived])
+  @@index([schoolId])
 }
 
 model Teacher {
@@ -164,6 +240,8 @@ model Teacher {
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
   substituteAssignments   SubstituteAssignment[]   @relation("SubstituteTeacherAssignments")
+  timetablePeriods        TimetablePeriod[]
+  assignments             Assignment[]
 
   @@index([isArchived])
 }
@@ -194,6 +272,7 @@ model Student {
   healthRecord            HealthRecord?
   clinicVisits            HealthClinicVisit[]
   profileUpdateRequests   ProfileUpdateRequest[]
+  assignmentSubmissions   AssignmentSubmission[]
 
   @@index([classId])
   @@index([status])
@@ -206,6 +285,9 @@ model Class {
   teacherId String?
   teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
 
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id])
+
   students         Student[]
   subjects         Subject[]
   attendance       Attendance[]
@@ -217,8 +299,13 @@ model Class {
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
   substituteAssignments   SubstituteAssignment[]   @relation("ClassSubstituteAssignments")
+  feeStructures           FeeStructure[]
+  timetablePeriods        TimetablePeriod[]
+  assignments             Assignment[]
+  admissionEnquiries      AdmissionEnquiry[]       @relation("ClassAdmissions")
 
   @@index([teacherId])
+  @@index([schoolId])
 }
 
 model Subject {
@@ -235,6 +322,8 @@ model Subject {
   learningChapters LearningChapter[]
 
   teachingAssignments TeachingAssignment[]
+  timetablePeriods    TimetablePeriod[]
+  assignments         Assignment[]
 
   @@index([teacherId])
 }
@@ -302,6 +391,9 @@ model AcademicSession {
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
 
+  schoolId  String?
+  school    School?               @relation(fields: [schoolId], references: [id])
+
   settings         SchoolSettings[]
   enrollments      StudentEnrollment[]
   marks            Mark[]
@@ -312,6 +404,8 @@ model AcademicSession {
 
   classTeacherAssignments ClassTeacherAssignment[]
   teachingAssignments     TeachingAssignment[]
+
+  @@index([schoolId])
 }
 
 // ============================================================
@@ -931,3 +1025,217 @@ model SubstituteAssignment {
   @@index([assignedByAdminId])
   @@index([validFrom, validUntil])
 }
+
+// ============================================================
+// TENANT (SAAS)
+// ============================================================
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?  @unique
+  address   String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  classes          Class[]
+  academicSessions AcademicSession[]
+  transactions     Transaction[]
+  feeStructures   FeeStructure[]
+  leaveRequests   LeaveRequest[]
+  assets          Asset[]
+  timetablePeriods TimetablePeriod[]
+  assignments     Assignment[]
+  admissionEnquiries AdmissionEnquiry[]
+}
+
+// ============================================================
+// FINANCIAL ENGINE (UNIFIED LEDGER & FEE STRUCTURES)
+// ============================================================
+
+model Transaction {
+  id          String            @id @default(cuid())
+  schoolId    String
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Float
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  title       String
+  description String?
+  referenceId String?           @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+model FeeStructure {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  title     String
+  amount    Float
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([classId])
+}
+
+// ============================================================
+// HR & OPERATIONAL ENGINE (UNIFIED ASSETS & LEAVES)
+// ============================================================
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  schoolId   String
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User        @relation("UserLeaveRequests", fields: [userId], references: [id], onDelete: Cascade)
+  type       LeaveType
+  status     LeaveStatus @default(PENDING)
+  startDate  DateTime
+  endDate    DateTime
+  reason     String
+  reviewerId String?
+  reviewer   User?       @relation("LeaveReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([status])
+}
+
+model Asset {
+  id           String        @id @default(cuid())
+  schoolId     String
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name         String
+  category     AssetCategory
+  status       AssetStatus   @default(AVAILABLE)
+  identifier   String?
+  assignedToId String?
+  assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([schoolId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([category])
+}
+
+// ============================================================
+// ACADEMIC & SCHEDULING (TIMETABLE & ASSIGNMENTS)
+// ============================================================
+
+model TimetablePeriod {
+  id        String    @id @default(cuid())
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  dayOfWeek DayOfWeek
+  startTime String
+  endTime   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([schoolId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([dayOfWeek])
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  maxMarks    Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions AssignmentSubmission[]
+
+  @@index([schoolId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+}
+
+model AssignmentSubmission {
+  id            String           @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status        SubmissionStatus @default(PENDING)
+  contentUrl    String?
+  marksObtained Float?
+  feedback      String?
+  submittedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+}
+
+// ============================================================
+// PUBLIC PORTALS & ONLINE ADMISSIONS
+// ============================================================
+
+model AdmissionEnquiry {
+  id                String          @id @default(cuid())
+  schoolId          String
+  school            School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  referenceNumber   String          @unique
+  studentFirstName  String
+  studentLastName   String
+  dateOfBirth       DateTime
+  appliedForClassId String
+  appliedForClass   Class           @relation("ClassAdmissions", fields: [appliedForClassId], references: [id], onDelete: Cascade)
+  parentName        String
+  parentEmail       String
+  parentPhone       String
+  status            AdmissionStatus @default(PENDING)
+  documentUrl       String?
+  adminNotes        String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([schoolId])
+  @@index([appliedForClassId])
+  @@index([status])
+  @@index([referenceNumber])
+}
+
+

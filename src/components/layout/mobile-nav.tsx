@@ -4,9 +4,10 @@ import { useState } from "react"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sidebar } from "./sidebar"
+import { Role } from "@prisma/client"
 
 interface MobileNavProps {
-  role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
+  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
   schoolName: string
   isClassTeacher?: boolean
 }
@@ -42,7 +43,7 @@ export function MobileNav({ role, schoolName, isClassTeacher }: MobileNavProps) 
         >
           <X className="h-5 w-5" />
         </Button>
-        <div className="flex-1 overflow-y-auto" onClick={() => setOpen(false)}>
+        <div className="flex-1 overflow-y-auto">
           <Sidebar role={role} schoolName={schoolName} isClassTeacher={isClassTeacher} />
         </div>
       </div>

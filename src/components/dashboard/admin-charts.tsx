@@ -18,7 +18,7 @@ export function AdminCharts({
           <CardDescription>Average percentage score across all classes</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={marksBySubject}>
                 <XAxis 
@@ -52,7 +52,7 @@ export function AdminCharts({
           <CardDescription>Published vs Draft marks distribution</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

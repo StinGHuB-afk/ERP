@@ -20,11 +20,13 @@ function calculateGrade(percentage: number): string {
 
 export default async function StudentDashboard() {
   const session = await verifySession()
+  if (!session?.userId) return <div className="p-8 text-center text-slate-500 font-medium">Unauthorized Access</div>
+
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } })
   const activeSessionId = settings?.activeSessionId || "none"
 
   const studentUser = await prisma.user.findUnique({
-    where: { id: session?.userId },
+    where: { id: session.userId },
     include: { 
       student: { 
         include: { 

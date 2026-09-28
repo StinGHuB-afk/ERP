@@ -1,11 +1,13 @@
 import { jwtVerify, SignJWT } from "jose"
+import { Role } from "@prisma/client"
 
 const secretKey = process.env.JWT_SECRET
 const key = new TextEncoder().encode(secretKey)
 
 export type SessionPayload = {
   userId: string
-  role: string
+  role: Role | string
+  schoolId?: string | null
   needsPasswordChange?: boolean
   expiresAt: Date
 }

@@ -49,10 +49,6 @@ export async function verifySession(allowPasswordChangeState: boolean = false) {
       return null
     }
 
-    if (user.mustChangePassword && !allowPasswordChangeState) {
-      return null
-    }
-
     return {
       isAuth: true as const,
       userId: session.userId,

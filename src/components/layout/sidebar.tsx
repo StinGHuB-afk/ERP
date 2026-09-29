@@ -46,7 +46,7 @@ export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
           {
             group: "SaaS Management",
             items: [
-              { name: "Schools", href: "/superadmin/schools", icon: Building2 },
+              { name: "Schools", href: "/superadmin", icon: Building2 },
             ],
           },
           {

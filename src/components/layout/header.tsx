@@ -31,7 +31,7 @@ export function Header({
     await logout()
   }
 
-  const alertHref = `/${role.toLowerCase()}/alerts`
+  const alertHref = (role as string) === "SUPERADMIN" ? "/admin/alerts" : `/${role.toLowerCase()}/alerts`
 
   return (
     <header className="flex h-14 items-center gap-4 border-b border-slate-200 bg-white px-5 lg:px-8 justify-between sticky top-0 z-40">

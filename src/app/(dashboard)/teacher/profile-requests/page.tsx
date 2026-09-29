@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { ProfileRequestActions } from "./profile-request-actions"
 import { UserCheck, Clock, CheckCircle2, ShieldAlert, FileEdit, ExternalLink } from "lucide-react"
-import { RequestedProfileData } from "@/app/actions/enterprise"
+import { RequestedProfileData } from "@/types/enterprise"
 
 export default async function TeacherProfileRequestsPage() {
   const session = await verifySession()

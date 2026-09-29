@@ -4,7 +4,8 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 import { ProfileUpdateStatus, ProfileEventType } from "@prisma/client"
-import { requestProfileUpdate, processProfileUpdate, RequestProfileUpdateInput } from "@/app/actions/enterprise"
+import { requestProfileUpdate, processProfileUpdate } from "@/app/actions/enterprise"
+import { RequestProfileUpdateInput } from "@/types/enterprise"
 
 export interface ProfileActionResult<T = any> {
   success: boolean

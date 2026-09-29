@@ -14,7 +14,7 @@ async function run() {
 
   console.log("Applying Phase 1 ERP schema expansion to Turso database...")
 
-  // 1. Column additions for Student and Teacher
+  // 1. Column additions for Student, Teacher, and AcademicSession
   const studentColumns = [
     'ALTER TABLE "Student" ADD COLUMN "emergencyContactName" TEXT;',
     'ALTER TABLE "Student" ADD COLUMN "emergencyContactPhone" TEXT;',
@@ -30,7 +30,11 @@ async function run() {
     'ALTER TABLE "Teacher" ADD COLUMN "specialization" TEXT;'
   ]
 
-  for (const colSql of [...studentColumns, ...teacherColumns]) {
+  const sessionColumns = [
+    'ALTER TABLE "AcademicSession" ADD COLUMN "isMarksPublished" INTEGER DEFAULT 0;'
+  ]
+
+  for (const colSql of [...studentColumns, ...teacherColumns, ...sessionColumns]) {
     try {
       await client.execute(colSql)
       console.log(`✓ Executed: ${colSql.split('ADD COLUMN')[1]}`)

@@ -1,43 +1,126 @@
-import { getAdminAlerts } from "@/app/actions/alert"
-import { BellRing } from "lucide-react"
-import { CreateAlertForm } from "@/components/dashboard/create-alert-form"
-import { AlertCard } from "@/components/alerts/alert-card"
+import { getAdminAlerts, markAlertAsRead } from "@/app/actions/notification.actions"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { AlertCircle, AlertTriangle, Info, Bell, CheckCircle2 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
+
+function formatRelativeTime(date: Date) {
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  if (diffInSeconds < 60) return "Just now"
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60)
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`
+  
+  const diffInHours = Math.floor(diffInMinutes / 60)
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+  
+  const diffInDays = Math.floor(diffInHours / 24)
+  if (diffInDays < 30) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+  
+  return date.toLocaleDateString()
+}
 
 export default async function AdminAlertsPage() {
   const alerts = await getAdminAlerts()
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 text-white rounded-lg shadow-sm">
-            <BellRing className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Alerts & Notifications</h1>
-            <p className="text-slate-500 text-sm">Targeted priority notifications for specific users and classes.</p>
-          </div>
-        </div>
-        <CreateAlertForm isAdmin={true} />
+    <div className="space-y-6 pb-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">System Alerts</h1>
+        <p className="text-sm text-slate-500">View and manage notifications and system alerts.</p>
       </div>
 
-      <div className="space-y-4">
-        {alerts.length === 0 ? (
-          <div className="rounded-xl border bg-white p-12 text-center text-slate-500 shadow-sm flex flex-col items-center justify-center">
-            <BellRing className="h-12 w-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No alerts created</h3>
-            <p className="text-xs text-slate-400 max-w-sm">
-              Publish targeted priority alerts to specific roles or classes.
-            </p>
-          </div>
-        ) : (
-          alerts.map((alert) => (
-            <AlertCard key={alert.id} alert={alert} showStats={true} />
-          ))
-        )}
-      </div>
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 flex flex-row items-center gap-2 pb-4">
+          <Bell className="w-5 h-5 text-slate-500" />
+          <CardTitle className="text-base font-semibold text-slate-800 m-0">Inbox</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Alert Details</TableHead>
+                <TableHead className="text-right">Time</TableHead>
+                <TableHead className="text-right w-[140px]">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {alerts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-slate-500 py-12">
+                    No alerts found. You&apos;re all caught up!
+                  </TableCell>
+                </TableRow>
+              ) : (
+                alerts.map((alert) => {
+                  const isRead = alert.isRead
+                  const markReadAction = markAlertAsRead.bind(null, alert.id)
+
+                  let Icon = Info
+                  let iconColor = "text-blue-500"
+                  let bgColor = "bg-blue-50"
+
+                  if (alert.type === "URGENT") {
+                    Icon = AlertCircle
+                    iconColor = "text-red-600"
+                    bgColor = "bg-red-50"
+                  } else if (alert.type === "WARNING") {
+                    Icon = AlertTriangle
+                    iconColor = "text-amber-500"
+                    bgColor = "bg-amber-50"
+                  }
+
+                  return (
+                    <TableRow key={alert.id} className={`${isRead ? 'opacity-60 bg-slate-50' : 'bg-white'}`}>
+                      <TableCell className="align-top pt-4">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isRead ? 'bg-slate-100' : bgColor}`}>
+                          {isRead ? (
+                            <CheckCircle2 className="w-4 h-4 text-slate-400" />
+                          ) : (
+                            <Icon className={`w-4 h-4 ${iconColor}`} />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top pt-4">
+                        <div className="flex flex-col gap-1">
+                          <span className={`font-semibold ${isRead ? 'text-slate-600' : 'text-slate-900'}`}>
+                            {alert.title}
+                          </span>
+                          <span className="text-sm text-slate-500">
+                            {alert.message}
+                          </span>
+                          <span className="text-xs text-slate-400 mt-1">
+                            From: {alert.creatorName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top pt-4 text-right text-sm text-slate-500 whitespace-nowrap">
+                        {formatRelativeTime(alert.createdAt)}
+                      </TableCell>
+                      <TableCell className="align-top pt-3 text-right">
+                        {!isRead ? (
+                          <form action={markReadAction}>
+                            <Button type="submit" variant="outline" size="sm" className="h-8 text-xs font-medium">
+                              Mark as Read
+                            </Button>
+                          </form>
+                        ) : (
+                          <span className="text-xs text-slate-400 font-medium px-3 py-1">Read</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

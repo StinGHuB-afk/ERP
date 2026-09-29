@@ -17,9 +17,10 @@ export default async function AdminLayout({
     where: { id: session.userId },
   })
 
-  if (dbUser?.role !== "ADMIN") {
+  if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPERADMIN") {
     if (dbUser?.role === "TEACHER") redirect('/teacher')
     if (dbUser?.role === "STUDENT") redirect('/student')
+    if (dbUser?.role === "PARENT") redirect('/parent')
     redirect('/login')
   }
 

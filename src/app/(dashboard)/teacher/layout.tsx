@@ -17,9 +17,9 @@ export default async function TeacherLayout({
     where: { id: session.userId },
   })
 
-  if (dbUser?.role !== "TEACHER") {
-    if (dbUser?.role === "ADMIN") redirect('/admin')
+  if (dbUser?.role !== "TEACHER" && dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPERADMIN") {
     if (dbUser?.role === "STUDENT") redirect('/student')
+    if (dbUser?.role === "PARENT") redirect('/parent')
     redirect('/login')
   }
 

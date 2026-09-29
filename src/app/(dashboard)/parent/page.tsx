@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export default async function ParentPortalPage() {
   const session = await verifySession()
 
-  if (!session || session.role !== "PARENT") {
+  if (!session || (session.role !== "PARENT" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     redirect("/login")
   }
 

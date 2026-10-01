@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { getTeacherDashboardData } from "@/app/actions/teacher.actions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -77,17 +78,23 @@ export default async function TeacherDashboard() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" className="gap-2">
-          <CheckSquare className="w-4 h-4" />
-          Take Attendance
+        <Button variant="outline" className="gap-2" asChild>
+          <Link href="/teacher/attendance">
+            <CheckSquare className="w-4 h-4" />
+            Take Attendance
+          </Link>
         </Button>
-        <Button variant="outline" className="gap-2">
-          <BookOpen className="w-4 h-4" />
-          Gradebook
+        <Button variant="outline" className="gap-2" asChild>
+          <Link href="/teacher/marks">
+            <BookOpen className="w-4 h-4" />
+            Gradebook
+          </Link>
         </Button>
-        <Button variant="outline" className="gap-2">
-          <Calendar className="w-4 h-4" />
-          Request Leave
+        <Button variant="outline" className="gap-2" asChild>
+          <Link href="/teacher/leave">
+            <Calendar className="w-4 h-4" />
+            Request Leave
+          </Link>
         </Button>
       </div>
 

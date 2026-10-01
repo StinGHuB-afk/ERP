@@ -29,7 +29,7 @@ export default async function Student360ProfilePage(
 ) {
   const params = await props.params
   const session = await verifySession()
-  if (!session || (session.role !== "ADMIN" && session.role !== "TEACHER")) {
+  if (!session || (session.role !== "SUPERADMIN" && session.role !== "ADMIN" && session.role !== "TEACHER")) {
     redirect("/login")
   }
 

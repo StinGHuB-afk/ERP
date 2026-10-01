@@ -33,6 +33,7 @@ export default async function Home() {
   if (dbUser.role === 'TEACHER') redirect('/teacher')
   if (dbUser.role === 'STUDENT') redirect('/student')
   if (dbUser.role === 'PARENT') redirect('/parent')
+  if (dbUser.role === 'LIBRARIAN') redirect('/librarian')
 
   redirect('/login')
 }

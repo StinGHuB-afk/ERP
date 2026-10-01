@@ -7,7 +7,7 @@ import { Sidebar } from "./sidebar"
 import { Role } from "@prisma/client"
 
 interface MobileNavProps {
-  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
+  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "LIBRARIAN"
   schoolName: string
   isClassTeacher?: boolean
 }

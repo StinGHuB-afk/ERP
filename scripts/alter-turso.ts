@@ -453,7 +453,54 @@ async function run() {
     console.log("Payroll schema error:", err.message)
   }
 
-  console.log("✅ Turso database Salary & Payroll schema migration completed successfully!")
+  // 15. Create Library Book and BorrowRecord tables & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "Book" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "author" TEXT NOT NULL,
+        "isbn" TEXT,
+        "publisher" TEXT,
+        "rackNumber" TEXT,
+        "totalCopies" INTEGER NOT NULL DEFAULT 1,
+        "availableCopies" INTEGER NOT NULL DEFAULT 1,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Book_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "Book_schoolId_idx" ON "Book"("schoolId");`)
+    console.log("✓ Created Book table and indexes")
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "BorrowRecord" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "bookId" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "borrowedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "dueDate" DATETIME NOT NULL,
+        "returnedAt" DATETIME,
+        "status" TEXT NOT NULL DEFAULT 'BORROWED',
+        "fineAmount" REAL DEFAULT 0,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "BorrowRecord_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "BorrowRecord_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "BorrowRecord_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "BorrowRecord_schoolId_idx" ON "BorrowRecord"("schoolId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "BorrowRecord_bookId_idx" ON "BorrowRecord"("bookId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "BorrowRecord_userId_idx" ON "BorrowRecord"("userId");`)
+    console.log("✓ Created BorrowRecord table and indexes")
+  } catch (err: any) {
+    console.log("Library schema error:", err.message)
+  }
+
+  console.log("✅ Turso database schema migration completed successfully!")
 }
 
 run()

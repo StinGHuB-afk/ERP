@@ -17,6 +17,7 @@ enum Role {
   TEACHER
   STUDENT
   PARENT
+  LIBRARIAN
 }
 
 enum StudentStatus {
@@ -228,6 +229,7 @@ model User {
   assignedAssets             Asset[]
   salaryStructure            SalaryStructure?
   payslips                   Payslip[]
+  borrowRecords              BorrowRecord[]
 
   @@index([isArchived])
   @@index([schoolId])
@@ -1064,6 +1066,8 @@ model School {
   salaryStructures SalaryStructure[]
   payrollRuns      PayrollRun[]
   payslips         Payslip[]
+  books            Book[]
+  borrowRecords    BorrowRecord[]
 }
 
 // ============================================================
@@ -1316,4 +1320,59 @@ model Payslip {
   @@unique([payrollRunId, userId])
 }
 
+// ============================================================
+// LIBRARY MANAGEMENT
+// ============================================================
+
+enum BorrowStatus {
+  BORROWED
+  RETURNED
+  LOST
+}
+
+model Book {
+  id              String   @id @default(cuid())
+  schoolId        String
+  
+  title           String
+  author          String
+  isbn            String?
+  publisher       String?
+  rackNumber      String?  
+  
+  totalCopies     Int      @default(1)
+  availableCopies Int      @default(1)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  borrowRecords   BorrowRecord[]
+
+  @@index([schoolId])
+}
+
+model BorrowRecord {
+  id              String       @id @default(cuid())
+  schoolId        String
+  bookId          String
+  userId          String
+  
+  borrowedAt      DateTime     @default(now())
+  dueDate         DateTime
+  returnedAt      DateTime?
+  status          BorrowStatus @default(BORROWED)
+  fineAmount      Float?       @default(0)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  school          School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  book            Book         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([bookId])
+  @@index([userId])
+}
 

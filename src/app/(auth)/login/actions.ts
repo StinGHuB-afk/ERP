@@ -85,6 +85,7 @@ export async function login(formData: FormData) {
   if (user.role === Role.TEACHER) redirect("/teacher")
   if (user.role === Role.STUDENT) redirect("/student")
   if (user.role === Role.PARENT) redirect("/parent")
+  if (user.role === Role.LIBRARIAN) redirect("/librarian")
 
   redirect("/")
 }

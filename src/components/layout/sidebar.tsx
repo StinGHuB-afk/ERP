@@ -21,10 +21,13 @@ import {
   UserCheck,
   Shield,
   DollarSign,
+  Briefcase,
+  Layers,
+  ArrowUpRight,
 } from "lucide-react"
 
 type SidebarProps = {
-  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
+  role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "LIBRARIAN"
   schoolName: string
   isClassTeacher?: boolean
   effectiveTenantId?: string | null
@@ -71,14 +74,18 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
             { name: "Classes", href: "/admin/classes", icon: BookOpen },
             { name: "Subjects", href: "/admin/subjects", icon: FileText },
             { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
+            { name: "Academic Sessions", href: "/admin/academic-session", icon: CalendarDays },
+            { name: "Promotions & Rollover", href: "/admin/promotions", icon: ArrowUpRight },
+            { name: "Library Catalog", href: "/admin/library", icon: BookOpen },
             { name: "Transport", href: "/admin/transport", icon: Bus },
           ],
         },
         {
-          group: "People",
+          group: "People & Admissions",
           items: [
             { name: "Teachers", href: "/admin/teachers", icon: Users },
             { name: "Students", href: "/admin/students", icon: GraduationCap },
+            { name: "Online Admissions", href: "/admin/admissions", icon: UserCheck },
           ],
         },
         {
@@ -89,9 +96,11 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           ],
         },
         {
-          group: "System",
+          group: "Finance & Operations",
           items: [
+            { name: "Finance & Fees", href: "/admin/finance", icon: DollarSign },
             { name: "Payroll", href: "/admin/payroll", icon: DollarSign },
+            { name: "Operations & Assets", href: "/admin/operations", icon: Briefcase },
             { name: "Activity Log", href: "/admin/activity", icon: Activity },
             { name: "Settings", href: "/admin/settings", icon: Building2 },
           ],
@@ -99,8 +108,36 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
       ]
     }
 
+    if (String(role) === "LIBRARIAN") {
+      return [
+        {
+          group: "Library Management",
+          items: [
+            { name: "Library Catalog", href: "/librarian", icon: BookOpen },
+          ],
+        },
+      ]
+    }
+
+    if (String(role) === "PARENT") {
+      return [
+        {
+          group: "Overview",
+          items: [{ name: "Parent Portal", href: "/parent", icon: LayoutDashboard }],
+        },
+        {
+          group: "Academics & Resources",
+          items: [{ name: "Library Catalog", href: "/parent/library", icon: BookOpen }],
+        },
+        {
+          group: "Communication",
+          items: [{ name: "Alerts", href: "/parent/alerts", icon: BellRing }],
+        },
+      ]
+    }
+
     switch (role) {
-      case "PARENT":
+      case "TEACHER":
       case Role.TEACHER:
         return [
           {
@@ -116,12 +153,17 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
               { name: "My Classes", href: "/teacher/classes", icon: BookOpen },
               { name: "Attendance", href: "/teacher/attendance", icon: CalendarDays },
               { name: "Enter Marks", href: "/teacher/marks", icon: FileText },
+              { name: "At-Risk Early Alert", href: "/teacher/at-risk", icon: Activity },
               { name: "Notes & Hub", href: "/teacher/notes", icon: BookOpen },
+              { name: "Library Catalog", href: "/teacher/library", icon: BookOpen },
             ],
           },
           {
             group: "People & Workflow",
-            items: [{ name: "Profile Requests", href: "/teacher/profile-requests", icon: UserCheck }],
+            items: [
+              { name: "Profile Requests", href: "/teacher/profile-requests", icon: UserCheck },
+              { name: "Leave Requests", href: "/teacher/leave", icon: Briefcase },
+            ],
           },
           {
             group: "Communication",
@@ -140,11 +182,17 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           },
           {
             group: "Academics",
-            items: [{ name: "Learning Hub", href: "/student/learning-hub", icon: BookOpen }],
+            items: [
+              { name: "Learning Hub", href: "/student/learning-hub", icon: BookOpen },
+              { name: "Library Catalog", href: "/student/library", icon: BookOpen },
+            ],
           },
           {
-            group: "Communication",
-            items: [{ name: "Inbox", href: "/student/alerts", icon: BellRing }],
+            group: "Communication & Workflow",
+            items: [
+              { name: "Leave Requests", href: "/student/leave", icon: Briefcase },
+              { name: "Inbox", href: "/student/alerts", icon: BellRing },
+            ],
           },
         ]
       default:

@@ -36,28 +36,31 @@ export function TenantSwitcher({ currentRole, initialTenantId }: TenantSwitcherP
     if (!value) return
     startTransition(async () => {
       await setSuperadminTenantContext(value === "global" ? null : value)
-      router.refresh()
+      const targetPath = value === "global" ? "/superadmin" : "/admin"
+      window.location.href = targetPath
     })
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="hidden sm:flex items-center text-sm font-medium text-slate-500 mr-1">
-        <Building2 className="h-4 w-4 mr-2" />
+    <div className="flex items-center gap-1.5">
+      <div className="hidden sm:flex items-center text-xs font-semibold text-slate-500 mr-1">
+        <Building2 className="h-3.5 w-3.5 text-slate-500 mr-1" />
         Tenant:
       </div>
       <Select
-        defaultValue={initialTenantId || "global"}
+        value={initialTenantId || "global"}
         onValueChange={handleValueChange}
         disabled={isPending}
       >
-        <SelectTrigger className="w-[180px] h-9 bg-white dark:bg-slate-950">
+        <SelectTrigger className="w-[190px] h-8 bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 focus:ring-0 focus:ring-offset-0 dark:bg-slate-100 dark:text-slate-800 dark:border-slate-200">
           <SelectValue placeholder="Select context" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="global">Global Superadmin View</SelectItem>
+        <SelectContent className="bg-white text-slate-900 border border-slate-200 shadow-md">
+          <SelectItem value="global" className="text-xs font-medium cursor-pointer">
+            Global Superadmin View
+          </SelectItem>
           {schools.map((school) => (
-            <SelectItem key={school.id} value={school.id}>
+            <SelectItem key={school.id} value={school.id} className="text-xs font-medium cursor-pointer">
               {school.name}
             </SelectItem>
           ))}

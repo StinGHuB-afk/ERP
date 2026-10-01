@@ -17,7 +17,7 @@ export interface ArchiveUserResult {
 export async function archiveUser(userId: string, role: Role): Promise<ArchiveUserResult> {
   try {
     const session = await verifySession()
-    if (!session || !session.isAuth || session.role !== "ADMIN") {
+    if (!session || !session.isAuth || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
       return { success: false, error: "Unauthorized: Admin access required." }
     }
 

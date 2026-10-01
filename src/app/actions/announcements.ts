@@ -15,7 +15,7 @@ const announcementSchema = z.object({
 
 export async function createAnnouncement(formData: FormData) {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized" }
   }
 
@@ -49,7 +49,7 @@ export async function createAnnouncement(formData: FormData) {
 
 export async function deleteAnnouncement(id: string) {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") return { error: "Unauthorized" }
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) return { error: "Unauthorized" }
 
   try {
     await prisma.announcement.delete({ where: { id } })

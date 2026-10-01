@@ -10,7 +10,7 @@ import { verifySession } from "@/lib/auth/session"
  */
 export async function exportAllStudents(classId?: string) {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     throw new Error("Unauthorized")
   }
 
@@ -42,7 +42,7 @@ export async function exportAllStudents(classId?: string) {
  */
 export async function exportAllTeachers() {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     throw new Error("Unauthorized")
   }
 
@@ -66,7 +66,7 @@ export async function exportAllTeachers() {
  */
 export async function exportAllClasses() {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     throw new Error("Unauthorized")
   }
 

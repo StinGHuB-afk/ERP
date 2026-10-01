@@ -17,7 +17,7 @@ export type PromotionStudentData = {
 
 export async function getPromotionEligibility(sourceClassId: string): Promise<PromotionStudentData[]> {
   const session = await verifySession();
-  if (!session || session.role !== "ADMIN") throw new Error("Unauthorized");
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) throw new Error("Unauthorized");
 
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } });
   const activeSessionId = settings?.activeSessionId;
@@ -74,7 +74,7 @@ export async function getPromotionEligibility(sourceClassId: string): Promise<Pr
 
 export async function promoteStudents(studentIds: string[], destinationClassId: string, expectedSessionId?: string) {
   const session = await verifySession();
-  if (!session || session.role !== "ADMIN") throw new Error("Unauthorized");
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) throw new Error("Unauthorized");
 
   const targetClass = await prisma.class.findUnique({ where: { id: destinationClassId } });
   if (!targetClass) throw new Error("Destination class not found");

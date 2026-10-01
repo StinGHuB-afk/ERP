@@ -16,7 +16,7 @@ export async function createSession(data: { name: string; startDate: Date; endDa
   if (!sessionUser?.userId) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
-  if (user?.role !== "ADMIN") throw new Error("Forbidden");
+  if (user?.role !== "ADMIN" && user?.role !== "SUPERADMIN") throw new Error("Forbidden");
 
   try {
     // Create as ARCHIVED by default, they must manually activate it
@@ -54,7 +54,7 @@ export async function activateSession(id: string) {
   if (!sessionUser?.userId) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
-  if (user?.role !== "ADMIN") throw new Error("Forbidden");
+  if (user?.role !== "ADMIN" && user?.role !== "SUPERADMIN") throw new Error("Forbidden");
 
   const newSession = await prisma.academicSession.findUnique({ where: { id } });
   if (!newSession) throw new Error("Session not found");
@@ -101,7 +101,7 @@ export async function archiveSession(id: string) {
   if (!sessionUser?.userId) throw new Error("Unauthorized");
 
   const user = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
-  if (user?.role !== "ADMIN") throw new Error("Forbidden");
+  if (user?.role !== "ADMIN" && user?.role !== "SUPERADMIN") throw new Error("Forbidden");
 
   const session = await prisma.academicSession.findUnique({ where: { id } });
   if (!session) throw new Error("Session not found");

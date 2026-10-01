@@ -24,7 +24,7 @@ export interface ActionResult<T = any> {
 export async function assignSubstitute(data: AssignSubstituteInput): Promise<ActionResult> {
   try {
     const session = await verifySession()
-    if (!session || !session.isAuth || session.role !== "ADMIN") {
+    if (!session || !session.isAuth || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
       return { success: false, error: "Unauthorized: Admin access required." }
     }
 

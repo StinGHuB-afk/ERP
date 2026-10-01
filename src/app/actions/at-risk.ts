@@ -54,7 +54,7 @@ async function resolveTeacherClassId(userId: string, sessionId: string): Promise
 
 export async function getAtRiskStudentsForTeacher(classId?: string) {
   const session = await verifySession()
-  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN")) {
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized access." }
   }
 
@@ -64,7 +64,7 @@ export async function getAtRiskStudentsForTeacher(classId?: string) {
   let targetClassId = classId || (session.role === "TEACHER" ? await resolveTeacherClassId(session.userId, activeSessionId) : null)
 
   if (!targetClassId) {
-    if (session.role === "ADMIN") {
+    if (session.role === "ADMIN" || session.role === "SUPERADMIN") {
       const flags = await prisma.studentRiskFlag.findMany({
         where: { academicSessionId: activeSessionId },
         include: includeFlagDetails,
@@ -152,7 +152,7 @@ export async function getAtRiskStudentsForTeacher(classId?: string) {
 
 export async function reviewRiskFlag(rawInput: { flagId: string; status: "ACKNOWLEDGED" | "DISMISSED"; reviewNote: string }) {
   const session = await verifySession()
-  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN")) {
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized access." }
   }
 

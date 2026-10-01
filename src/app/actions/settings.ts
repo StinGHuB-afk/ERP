@@ -16,7 +16,7 @@ const settingsSchema = z.object({
 
 export async function updateSchoolSettings(formData: FormData) {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized" }
   }
 

@@ -9,14 +9,14 @@ import { assertTeacherCanManageContent, requireActiveSessionId } from '@/lib/aut
 
 async function verifyTeacherOwnership(subjectId: string, expectedSessionId?: string, classId?: string) {
   const session = await verifySession()
-  if (!session || (session.role !== 'TEACHER' && session.role !== 'ADMIN')) throw new Error('Unauthorized')
+  if (!session || (session.role !== 'TEACHER' && session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) throw new Error('Unauthorized')
 
   const activeSessionId = await requireActiveSessionId()
   if (expectedSessionId && expectedSessionId !== activeSessionId) {
     throw new Error('The active academic session has changed. Please refresh the page.')
   }
 
-  if (session.role === 'ADMIN') return { userId: session.userId, role: session.role, teacherId: 'ADMIN' }
+  if (session.role === 'ADMIN' || session.role === 'SUPERADMIN') return { userId: session.userId, role: session.role, teacherId: 'ADMIN' }
 
   const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId }, select: { id: true } })
   if (!teacher) throw new Error('Teacher record not found')

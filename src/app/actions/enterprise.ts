@@ -38,7 +38,7 @@ export async function logTimelineEvent(
     }
 
     // Role check: Only Staff (TEACHER / ADMIN) can add timeline events manually
-    if (session.role !== "ADMIN" && session.role !== "TEACHER") {
+    if (session.role !== "ADMIN" && session.role !== "SUPERADMIN" && session.role !== "TEACHER") {
       return { success: false, error: "Forbidden: Only authorized staff can record timeline events." }
     }
 
@@ -183,7 +183,7 @@ export async function processTransportRequest(
     }
 
     // RBAC: Strictly Admin only
-    if (session.role !== "ADMIN") {
+    if (session.role !== "ADMIN" && session.role !== "SUPERADMIN") {
       return { success: false, error: "Forbidden: Only administrators can process transport requests." }
     }
 
@@ -304,7 +304,7 @@ export async function logClinicVisit(data: LogClinicVisitInput) {
     }
 
     // RBAC: Teacher or Admin only
-    if (session.role !== "TEACHER" && session.role !== "ADMIN") {
+    if (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN") {
       return { success: false, error: "Forbidden: Only teachers or school administrators can log clinic visits." }
     }
 
@@ -408,7 +408,7 @@ export async function upsertHealthRecord(data: UpsertHealthRecordInput) {
       return { success: false, error: "Unauthorized: Authentication required." }
     }
 
-    if (session.role !== "ADMIN" && session.role !== "TEACHER") {
+    if (session.role !== "ADMIN" && session.role !== "SUPERADMIN" && session.role !== "TEACHER") {
       return { success: false, error: "Forbidden: Only staff members can manage health records." }
     }
 
@@ -626,7 +626,7 @@ export async function processProfileUpdate(
     }
 
     // RBAC: Only Teacher or Admin
-    if (session.role !== "TEACHER" && session.role !== "ADMIN") {
+    if (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN") {
       return { success: false, error: "Forbidden: Only teachers or administrators can approve profile update requests." }
     }
 

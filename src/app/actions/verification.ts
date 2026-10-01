@@ -20,7 +20,7 @@ export async function generateCryptoVerificationCode(): Promise<string> {
  */
 export async function finalizeReportCardWithCryptoSignature(recordId: string) {
   const session = await verifySession()
-  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN")) {
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized" }
   }
 
@@ -65,7 +65,7 @@ export async function finalizeReportCardWithCryptoSignature(recordId: string) {
  */
 export async function revokeReportCard(recordId: string, reason: string) {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized. Admin privileges required for revocation." }
   }
 

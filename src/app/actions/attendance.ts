@@ -18,7 +18,7 @@ export interface UpsertAttendanceInput {
 
 export async function upsertAttendance(data: UpsertAttendanceInput) {
   const session = await verifySession()
-  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN")) {
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     return { error: "Unauthorized", status: 401 }
   }
 

@@ -42,7 +42,7 @@ export async function reviewProfileUpdate(
 export async function getPendingProfileUpdatesWithProofs(): Promise<ProfileActionResult> {
   try {
     const session = await verifySession()
-    if (!session || !session.isAuth || (session.role !== "ADMIN" && session.role !== "TEACHER")) {
+    if (!session || !session.isAuth || (session.role !== "ADMIN" && session.role !== "SUPERADMIN" && session.role !== "TEACHER")) {
       return { success: false, error: "Unauthorized access." }
     }
 

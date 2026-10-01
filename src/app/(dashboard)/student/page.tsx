@@ -3,7 +3,7 @@ import { getStudentDashboardData } from "@/app/actions/student.actions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { GraduationCap, CalendarCheck, BookOpen, AlertCircle, FileText, Calendar, CreditCard } from "lucide-react"
+import { GraduationCap, CalendarCheck, BookOpen, AlertCircle, FileText, Calendar, CreditCard, HeartPulse } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -41,7 +41,7 @@ export default async function StudentDashboard() {
       </div>
 
       {/* Top Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card className="shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-slate-600">My Class</CardTitle>
@@ -75,6 +75,18 @@ export default async function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">2</div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Blood Group</CardTitle>
+            <div className="h-8 w-8 bg-rose-100 rounded-full flex items-center justify-center">
+              <HeartPulse className="h-4 w-4 text-rose-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-rose-700">{student.healthRecord?.bloodGroup || "Not Specified"}</div>
           </CardContent>
         </Card>
       </div>

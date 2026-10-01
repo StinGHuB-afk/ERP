@@ -23,6 +23,7 @@ export async function getParentChildren() {
             include: {
               user: { select: { name: true, email: true } },
               class: { select: { name: true } },
+              healthRecord: true,
             },
           },
         },
@@ -42,6 +43,7 @@ export async function getParentChildren() {
     className: mapping.student.class?.name || "Unassigned",
     relationship: mapping.relationship,
     isPrimaryContact: mapping.isPrimaryContact,
+    healthRecord: mapping.student.healthRecord,
   }))
 
   return { success: true, children }

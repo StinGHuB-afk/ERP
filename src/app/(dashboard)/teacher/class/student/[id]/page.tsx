@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getClassTeacherClassIds } from "@/lib/auth/teacher-authorization"
 import { Textarea } from "@/components/ui/textarea"
-import { Printer, ShieldCheck, User, Save, BookOpen, AlertCircle, Calendar, Lock } from "lucide-react"
+import { UpdateHealthRecordForm } from "@/components/forms/UpdateHealthRecordForm"
+import { LogClinicVisitForm } from "@/components/forms/LogClinicVisitForm"
+import { Printer, ShieldCheck, User, Save, BookOpen, AlertCircle, Calendar, Lock, HeartPulse, Stethoscope } from "lucide-react"
 import { saveRemarks, publishReport, finalizeRecord } from "./actions"
 import { PrintButton } from "./print-button"
 import Link from "next/link"
@@ -44,6 +46,10 @@ export default async function StudentProfilePage(
     include: {
       user: true,
       class: true,
+      healthRecord: true,
+      clinicVisits: {
+        orderBy: { visitDate: 'desc' },
+      },
       marks: {
         include: { subject: true },
         orderBy: [{ subject: { name: 'asc' } }, { examType: 'asc' }]
@@ -279,6 +285,54 @@ export default async function StudentProfilePage(
                 <div className="bg-orange-50 p-3 rounded-lg border border-orange-100 print:border-black">
                   <div className="text-2xl font-bold text-orange-700">{totalLate}</div>
                   <div className="text-xs text-orange-600 uppercase tracking-wider mt-1">Late</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Health & Medical File */}
+          <Card className="border-slate-200 shadow-sm print:hidden">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <HeartPulse className="h-5 w-5 text-rose-600" />
+                  Health & Medical File
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Student blood group, medical conditions, allergies, and clinic visits.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <UpdateHealthRecordForm
+                  studentId={student.id}
+                  studentName={student.user?.name || "Student"}
+                  initialData={student.healthRecord}
+                  triggerText="Edit Medical File"
+                />
+                <LogClinicVisitForm
+                  studentId={student.id}
+                  studentName={student.user?.name || "Student"}
+                  triggerText="+ Log Visit"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Blood Group</span>
+                  <span className="text-rose-700 font-black text-sm">{student.healthRecord?.bloodGroup || "Not Specified"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Allergies</span>
+                  <span className="text-slate-800 font-semibold">{student.healthRecord?.allergies || "None Reported"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Daily Medications</span>
+                  <span className="text-slate-800 font-semibold">{student.healthRecord?.dailyMedications || "None"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Doctor Contact</span>
+                  <span className="text-slate-800 font-semibold">{student.healthRecord?.doctorName || "N/A"} ({student.healthRecord?.doctorPhone || "No Phone"})</span>
                 </div>
               </div>
             </CardContent>

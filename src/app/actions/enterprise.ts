@@ -408,8 +408,18 @@ export async function upsertHealthRecord(data: UpsertHealthRecordInput) {
       return { success: false, error: "Unauthorized: Authentication required." }
     }
 
-    if (session.role !== "ADMIN" && session.role !== "SUPERADMIN" && session.role !== "TEACHER") {
-      return { success: false, error: "Forbidden: Only staff members can manage health records." }
+    if (session.role === "PARENT") {
+      const parent = await prisma.parent.findUnique({ where: { userId: session.userId } })
+      if (!parent) return { success: false, error: "Parent profile not found." }
+
+      const relation = await prisma.parentStudent.findUnique({
+        where: { parentId_studentId: { parentId: parent.id, studentId: data.studentId } },
+      })
+      if (!relation) {
+        return { success: false, error: "Unauthorized: Student is not linked to your parent account." }
+      }
+    } else if (session.role !== "ADMIN" && session.role !== "SUPERADMIN" && session.role !== "TEACHER") {
+      return { success: false, error: "Forbidden: You do not have authority to manage health records." }
     }
 
     const healthRecord = await prisma.healthRecord.upsert({
@@ -441,7 +451,10 @@ export async function upsertHealthRecord(data: UpsertHealthRecordInput) {
       },
     })
 
-    revalidatePath(`/admin/health`)
+    revalidatePath(`/admin/students/${data.studentId}`)
+    revalidatePath(`/teacher/class/student/${data.studentId}`)
+    revalidatePath(`/student`)
+    revalidatePath(`/parent`)
     return { success: true, data: healthRecord }
   } catch (error: any) {
     console.error("Error in upsertHealthRecord:", error)

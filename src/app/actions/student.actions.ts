@@ -17,6 +17,7 @@ export async function getStudentDashboardData() {
   const student = await prisma.student.findUnique({
     where: { userId: session.userId },
     include: {
+      healthRecord: true,
       class: {
         include: {
           timetablePeriods: {

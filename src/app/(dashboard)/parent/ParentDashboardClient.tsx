@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { getChildAttendance, getChildResults } from "@/app/actions/parent"
+import { UpdateHealthRecordForm } from "@/components/forms/UpdateHealthRecordForm"
 import {
   Users,
   UserCheck,
@@ -14,6 +15,8 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  HeartPulse,
+  Activity,
 } from "lucide-react"
 
 interface LinkedChild {
@@ -24,6 +27,7 @@ interface LinkedChild {
   className: string
   relationship: string
   isPrimaryContact: boolean
+  healthRecord?: any
 }
 
 interface ParentDashboardClientProps {
@@ -37,7 +41,7 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
   const [attendanceData, setAttendanceData] = useState<any>(null)
   const [resultsData, setResultsData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<"ATTENDANCE" | "RESULTS">("ATTENDANCE")
+  const [activeTab, setActiveTab] = useState<"ATTENDANCE" | "RESULTS" | "HEALTH">("ATTENDANCE")
 
   useEffect(() => {
     if (!selectedChild) return
@@ -167,6 +171,18 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
           <Award className="w-4 h-4" />
           Published Results & Report Cards
         </button>
+
+        <button
+          onClick={() => setActiveTab("HEALTH")}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === "HEALTH"
+              ? "border-rose-600 text-rose-600"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <HeartPulse className="w-4 h-4 text-rose-600" />
+          Health & Medical File
+        </button>
       </div>
 
       {isLoading ? (
@@ -283,7 +299,7 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
             )}
           </div>
         </div>
-      ) : (
+      ) : activeTab === "RESULTS" ? (
         /* Results View */
         <div className="space-y-6">
           {/* Report Card Verification Seal Banner */}
@@ -371,6 +387,90 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Health & Medical File View */
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <HeartPulse className="w-5 h-5 text-rose-600" />
+                  Health & Medical Profile
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Official medical details and emergency contact protocol for <strong className="text-slate-800">{selectedChild?.name}</strong>.
+                </p>
+              </div>
+
+              {selectedChild && (
+                <UpdateHealthRecordForm
+                  studentId={selectedChild.studentId}
+                  studentName={selectedChild.name}
+                  initialData={selectedChild.healthRecord}
+                  triggerText="Update Medical Info"
+                  variant="default"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block mb-1">
+                  Blood Group
+                </span>
+                <span className="text-2xl font-black text-rose-700">
+                  {selectedChild?.healthRecord?.bloodGroup || "Not Specified"}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Allergies
+                </span>
+                <span className="text-sm font-bold text-slate-800">
+                  {selectedChild?.healthRecord?.allergies || "None Reported"}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Daily Medications
+                </span>
+                <span className="text-sm font-bold text-slate-800">
+                  {selectedChild?.healthRecord?.dailyMedications || "None"}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Doctor / Phone
+                </span>
+                <span className="text-sm font-bold text-slate-800">
+                  {selectedChild?.healthRecord?.doctorName || "N/A"}{" "}
+                  {selectedChild?.healthRecord?.doctorPhone ? `(${selectedChild.healthRecord.doctorPhone})` : ""}
+                </span>
+              </div>
+            </div>
+
+            {(selectedChild?.healthRecord?.chronicConditions || selectedChild?.healthRecord?.emergencyMedicalProtocol) && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs">
+                {selectedChild?.healthRecord?.chronicConditions && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-900">
+                    <span className="font-bold block uppercase text-[10px] text-amber-800 mb-0.5">Chronic Conditions</span>
+                    <span>{selectedChild.healthRecord.chronicConditions}</span>
+                  </div>
+                )}
+                {selectedChild?.healthRecord?.emergencyMedicalProtocol && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-indigo-900">
+                    <span className="font-bold block uppercase text-[10px] text-indigo-800 mb-0.5">Emergency Medical Protocol</span>
+                    <span>{selectedChild.healthRecord.emergencyMedicalProtocol}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

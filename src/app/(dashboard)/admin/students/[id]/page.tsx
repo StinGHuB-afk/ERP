@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LogClinicVisitForm } from "@/components/forms/LogClinicVisitForm"
+import { UpdateHealthRecordForm } from "@/components/forms/UpdateHealthRecordForm"
 import { ArchiveUserModal } from "@/components/modals/ArchiveUserModal"
 import {
   ArrowLeft,
@@ -256,11 +257,19 @@ export default async function Student360ProfilePage(
                   Medical conditions, allergies, daily medications, and logged clinic incidents.
                 </CardDescription>
               </div>
-              <LogClinicVisitForm
-                studentId={student.id}
-                studentName={user.name || "Student"}
-                triggerText="+ Log Visit"
-              />
+              <div className="flex items-center gap-2">
+                <UpdateHealthRecordForm
+                  studentId={student.id}
+                  studentName={user.name || "Student"}
+                  initialData={healthRecord}
+                  triggerText="Edit Medical File"
+                />
+                <LogClinicVisitForm
+                  studentId={student.id}
+                  studentName={user.name || "Student"}
+                  triggerText="+ Log Visit"
+                />
+              </div>
             </CardHeader>
             <CardContent className="p-5 space-y-4 text-xs">
               {/* Medical Badges & Summary */}

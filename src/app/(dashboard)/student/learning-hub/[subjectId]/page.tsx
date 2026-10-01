@@ -7,7 +7,7 @@ import { StudentHubViewer } from "@/components/dashboard/learning-hub/student-hu
 
 export default async function StudentNotesSubjectPage({ params }: { params: Promise<{ subjectId: string }> }) {
   const session = await verifySession()
-  if (!session || session.role !== "STUDENT") redirect("/login")
+  if (!session || (session.role !== "STUDENT" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) redirect("/login")
 
   const { subjectId } = await params
 
@@ -15,7 +15,16 @@ export default async function StudentNotesSubjectPage({ params }: { params: Prom
     where: { userId: session.userId }
   })
   
-  if (!student) redirect("/login")
+  if (!student) {
+    if (session.role === "ADMIN" || session.role === "SUPERADMIN") {
+      return (
+        <div className="p-8 text-center text-slate-500">
+          Viewing as Admin/Superadmin without a linked student profile.
+        </div>
+      )
+    }
+    redirect("/login")
+  }
 
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } })
   const activeSessionId = settings?.activeSessionId

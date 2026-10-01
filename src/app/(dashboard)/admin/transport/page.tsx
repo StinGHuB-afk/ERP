@@ -9,7 +9,7 @@ import { Bus, Clock, CheckCircle2, XCircle, Users, ArrowRight, ShieldCheck } fro
 
 export default async function AdminTransportPage() {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     redirect("/login")
   }
 

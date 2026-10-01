@@ -10,7 +10,7 @@ import { ArrowLeft, UserCheck, Calendar, Clock, BookOpen, ShieldCheck } from "lu
 
 export default async function AdminSubstituteDashboardPage() {
   const session = await verifySession()
-  if (!session || session.role !== "ADMIN") {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     redirect("/login")
   }
 

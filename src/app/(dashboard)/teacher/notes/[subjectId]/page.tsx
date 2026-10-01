@@ -8,7 +8,7 @@ import { assertTeacherCanManageContent } from "@/lib/auth/teacher-authorization"
 
 export default async function TeacherNotesSubjectPage({ params, searchParams }: { params: Promise<{ subjectId: string }>, searchParams: Promise<{ classId?: string }> }) {
   const session = await verifySession()
-  if (!session || session.role !== "TEACHER") redirect("/login")
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) redirect("/login")
 
   const { subjectId } = await params
   const { classId } = await searchParams
@@ -17,7 +17,11 @@ export default async function TeacherNotesSubjectPage({ params, searchParams }: 
     where: { userId: session.userId }
   })
   
-  if (!teacher) redirect("/login")
+  if (!teacher) {
+    if (session.role !== "ADMIN" && session.role !== "SUPERADMIN") {
+      redirect("/login")
+    }
+  }
 
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } })
   const activeSessionId = settings?.activeSessionId
@@ -26,11 +30,13 @@ export default async function TeacherNotesSubjectPage({ params, searchParams }: 
     return <div className="p-4 text-red-600">No active academic session.</div>
   }
 
-  // Verify ownership
-  try {
-    await assertTeacherCanManageContent(teacher.id, subjectId, activeSessionId, classId)
-  } catch (e) {
-    notFound()
+  // Verify ownership for teachers
+  if (teacher) {
+    try {
+      await assertTeacherCanManageContent(teacher.id, subjectId, activeSessionId, classId)
+    } catch (e) {
+      notFound()
+    }
   }
 
   const subject = await prisma.subject.findUnique({

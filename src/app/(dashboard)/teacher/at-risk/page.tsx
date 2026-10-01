@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export default async function AtRiskTeacherPage() {
   const session = await verifySession()
 
-  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN")) {
+  if (!session || (session.role !== "TEACHER" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     redirect("/login")
   }
 

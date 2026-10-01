@@ -7,13 +7,26 @@ import { BookOpen } from "lucide-react"
 
 export default async function StudentLearningHubIndex() {
   const session = await verifySession()
-  if (!session || session.role !== "STUDENT") redirect("/login")
+  if (!session || (session.role !== "STUDENT" && session.role !== "ADMIN" && session.role !== "SUPERADMIN")) redirect("/login")
 
   const student = await prisma.student.findUnique({
     where: { userId: session.userId }
   })
   
-  if (!student) redirect("/login")
+  if (!student) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="w-full max-w-md shadow-sm border-slate-200">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl text-slate-900">No Student Profile Associated</CardTitle>
+            <CardDescription className="text-slate-500 mt-2">
+              Viewing as Admin/Superadmin without a linked student profile.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } })
   const activeSessionId = settings?.activeSessionId

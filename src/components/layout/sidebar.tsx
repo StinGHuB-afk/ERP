@@ -20,6 +20,7 @@ import {
   Bus,
   UserCheck,
   Shield,
+  DollarSign,
 } from "lucide-react"
 
 type SidebarProps = {
@@ -90,6 +91,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
         {
           group: "System",
           items: [
+            { name: "Payroll", href: "/admin/payroll", icon: DollarSign },
             { name: "Activity Log", href: "/admin/activity", icon: Activity },
             { name: "Settings", href: "/admin/settings", icon: Building2 },
           ],

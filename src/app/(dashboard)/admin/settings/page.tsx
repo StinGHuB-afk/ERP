@@ -29,7 +29,7 @@ export default async function AdminSettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-slate-900 text-white rounded-lg">
+        <div className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl shadow-xs">
           <Building2 className="h-6 w-6" />
         </div>
         <div>

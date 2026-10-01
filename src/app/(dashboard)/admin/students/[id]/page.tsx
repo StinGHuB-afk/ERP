@@ -107,42 +107,42 @@ export default async function Student360ProfilePage(
 
       {/* Hero Overview Card */}
       <Card className="shadow-sm border-slate-200 bg-white overflow-hidden">
-        <div className="bg-slate-900 text-white p-6 sm:p-8 relative">
+        <div className="bg-gradient-to-r from-slate-50 via-blue-50/60 to-indigo-50/80 border-b border-slate-200/80 p-6 sm:p-8 relative">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-5">
-              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-3xl flex items-center justify-center shadow-lg border-2 border-white/20">
+              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-3xl flex items-center justify-center shadow-md border-2 border-white">
                 {user.name ? user.name.charAt(0).toUpperCase() : "S"}
               </div>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-black text-white">{user.name || "Student"}</h2>
-                  <Badge className="bg-emerald-500 text-white font-semibold">
+                  <h2 className="text-2xl font-black text-slate-900">{user.name || "Student"}</h2>
+                  <Badge className="bg-emerald-600 text-white font-semibold">
                     {student.status}
                   </Badge>
                   {student.behavioralFlags && (
-                    <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400/40 gap-1">
-                      <AlertTriangle className="h-3 w-3" />
+                    <Badge variant="outline" className="bg-amber-100 text-amber-900 border-amber-300 gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                       {student.behavioralFlags}
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-xs text-slate-300 mt-2 flex-wrap font-medium">
-                  <div>Class: <span className="text-white font-bold">{student.class?.name || "Unassigned"}</span></div>
-                  <div>Roll #: <span className="text-white font-bold">{student.rollNumber || "N/A"}</span></div>
-                  <div>Email: <span className="text-white font-bold">{user.email}</span></div>
+                <div className="flex items-center gap-4 text-xs text-slate-600 mt-2 flex-wrap font-medium">
+                  <div>Class: <span className="text-slate-900 font-bold">{student.class?.name || "Unassigned"}</span></div>
+                  <div>Roll #: <span className="text-slate-900 font-bold">{student.rollNumber || "N/A"}</span></div>
+                  <div>Email: <span className="text-slate-900 font-bold">{user.email}</span></div>
                 </div>
               </div>
             </div>
 
             {/* Quick Emergency Banner */}
             {student.emergencyContactPhone && (
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 text-xs min-w-[240px]">
-                <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider mb-1 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-rose-400" />
+              <div className="bg-white/90 backdrop-blur-md p-4 rounded-xl border border-slate-200/80 text-xs min-w-[240px] shadow-xs">
+                <div className="text-[11px] font-semibold uppercase text-slate-500 tracking-wider mb-1 flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-rose-500" />
                   Emergency Contact
                 </div>
-                <div className="font-bold text-white text-sm">{student.emergencyContactName || "Primary Contact"}</div>
-                <div className="text-slate-200 mt-0.5">{student.emergencyContactPhone} ({student.emergencyContactRelation || "Guardian"})</div>
+                <div className="font-bold text-slate-900 text-sm">{student.emergencyContactName || "Primary Contact"}</div>
+                <div className="text-slate-600 mt-0.5">{student.emergencyContactPhone} ({student.emergencyContactRelation || "Guardian"})</div>
               </div>
             )}
           </div>

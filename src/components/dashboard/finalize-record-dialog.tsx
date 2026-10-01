@@ -57,7 +57,7 @@ export function FinalizeRecordDialog({
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs h-8 px-3 rounded-md shadow-subtle flex items-center gap-1.5"
+        className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs h-8 px-3 rounded-md shadow-subtle flex items-center gap-1.5"
       >
         <Lock className="h-3.5 w-3.5 text-slate-300" />
         <span>Finalize Record</span>
@@ -104,7 +104,7 @@ export function FinalizeRecordDialog({
                 type="button"
                 onClick={handleFinalizeConfirm}
                 disabled={isPending}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs h-9 px-4 rounded-md shadow-subtle flex items-center gap-1.5"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs h-9 px-4 rounded-md shadow-subtle flex items-center gap-1.5"
               >
                 {isPending ? (
                   <>

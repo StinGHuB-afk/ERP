@@ -515,7 +515,7 @@ export function PayrollDashboardClient({ initialData }: PayrollDashboardClientPr
                           <Button
                             size="sm"
                             onClick={() => handleOpenSalaryModal(staff)}
-                            className="h-7 text-xs bg-slate-900 hover:bg-slate-800 text-white"
+                            className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
                           >
                             <Plus className="h-3.5 w-3.5 mr-1" />
                             Setup Salary

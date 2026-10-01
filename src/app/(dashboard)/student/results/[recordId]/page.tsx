@@ -122,22 +122,22 @@ export default async function ReportCardPage({ params }: { params: Promise<{ rec
           )}
 
           {/* Premium School Header */}
-          <div className="bg-slate-900 text-white p-10 text-center relative print:bg-white print:text-black print:border-b-4 print:border-slate-900">
+          <div className="bg-gradient-to-br from-indigo-50/90 via-slate-50 to-blue-50 text-slate-900 p-10 text-center relative border-b border-slate-200 print:bg-white print:text-black print:border-b-4 print:border-slate-900">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] print:hidden"></div>
             
             <div className="relative z-10 flex flex-col items-center justify-center">
-              <div className="bg-white p-4 rounded-full shadow-lg print:border-2 print:border-black mb-6">
-                <GraduationCap className="h-12 w-12 text-slate-900 print:text-black" />
+              <div className="bg-white p-4 rounded-full shadow-md border border-slate-200 print:border-2 print:border-black mb-6">
+                <GraduationCap className="h-12 w-12 text-indigo-600 print:text-black" />
               </div>
-              <h1 className="text-4xl font-black tracking-tight uppercase mb-2 font-serif">{schoolName}</h1>
-              <p className="text-slate-300 print:text-slate-600 text-sm tracking-widest uppercase font-medium">{address}</p>
+              <h1 className="text-4xl font-black tracking-tight uppercase mb-2 font-serif text-slate-900">{schoolName}</h1>
+              <p className="text-slate-600 print:text-slate-600 text-sm tracking-widest uppercase font-medium">{address}</p>
               
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <div className="bg-slate-800/80 backdrop-blur-sm print:bg-slate-100 print:text-black text-white px-8 py-2.5 rounded-full text-sm font-bold tracking-wider uppercase border border-slate-700 print:border-slate-300">
+                <div className="bg-white/90 shadow-xs backdrop-blur-sm print:bg-slate-100 print:text-black text-slate-800 px-8 py-2.5 rounded-full text-sm font-bold tracking-wider uppercase border border-slate-300">
                   Official Academic Transcript
                 </div>
-                <div className="bg-indigo-600/90 backdrop-blur-sm print:bg-slate-100 print:text-black text-white px-8 py-2.5 rounded-full text-sm font-bold tracking-wider uppercase border border-indigo-500 print:border-slate-300">
+                <div className="bg-indigo-600 backdrop-blur-sm print:bg-slate-100 print:text-black text-white px-8 py-2.5 rounded-full text-sm font-bold tracking-wider uppercase border border-indigo-700 print:border-slate-300">
                   Session: {record.academicSession.name}
                 </div>
               </div>
@@ -230,7 +230,7 @@ export default async function ReportCardPage({ params }: { params: Promise<{ rec
 
               {/* Final Result Block */}
               <div className="md:col-span-5 flex flex-col gap-4">
-                <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col justify-center items-center text-center print:bg-white print:text-black print:border-4 print:border-black print:rounded-none shadow-xl h-full relative overflow-hidden">
+                <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800 text-white rounded-2xl p-8 flex flex-col justify-center items-center text-center print:bg-white print:text-black print:border-4 print:border-black print:rounded-none shadow-lg h-full relative overflow-hidden">
                   
                   {/* Decorative element */}
                   <div className="absolute -right-6 -top-6 opacity-10 print:hidden">

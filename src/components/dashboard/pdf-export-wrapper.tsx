@@ -82,7 +82,7 @@ export function PdfExportWrapper({
           Print
         </Button>
         <Button 
-          className="bg-slate-900 text-white hover:bg-slate-800"
+          className="bg-indigo-600 text-white hover:bg-indigo-700 font-medium"
           onClick={handleExportPDF}
           disabled={isExporting}
         >

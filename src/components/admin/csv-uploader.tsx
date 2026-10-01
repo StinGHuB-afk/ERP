@@ -193,7 +193,7 @@ export function CsvUploader() {
           <button
             onClick={handleUpload}
             disabled={isPending}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-lg shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {isPending ? (
               <>

@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { getStudentDashboardData } from "@/app/actions/student.actions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { GraduationCap, CalendarCheck, BookOpen, AlertCircle, FileText, Calendar, CreditCard } from "lucide-react"
 
@@ -81,24 +81,18 @@ export default async function StudentDashboard() {
 
       {/* Quick Links */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" className="gap-2" asChild>
-          <Link href="/student/results">
-            <FileText className="w-4 h-4" />
-            My Report Card
-          </Link>
-        </Button>
-        <Button variant="outline" className="gap-2" asChild>
-          <Link href="/student/leave">
-            <Calendar className="w-4 h-4" />
-            Submit Leave
-          </Link>
-        </Button>
-        <Button variant="outline" className="gap-2" asChild>
-          <Link href="/student/results">
-            <CreditCard className="w-4 h-4" />
-            Fees & Dues
-          </Link>
-        </Button>
+        <Link href="/student/results" className={buttonVariants({ variant: "outline", className: "gap-2" })}>
+          <FileText className="w-4 h-4" />
+          My Report Card
+        </Link>
+        <Link href="/student/leave" className={buttonVariants({ variant: "outline", className: "gap-2" })}>
+          <Calendar className="w-4 h-4" />
+          Submit Leave
+        </Link>
+        <Link href="/student/results" className={buttonVariants({ variant: "outline", className: "gap-2" })}>
+          <CreditCard className="w-4 h-4" />
+          Fees & Dues
+        </Link>
       </div>
 
       {/* Today's Classes */}

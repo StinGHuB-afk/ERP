@@ -391,7 +391,69 @@ async function run() {
     console.log("AdmissionEnquiry error:", err.message)
   }
 
-  console.log("✅ Turso database Online Admissions schema migration completed successfully!")
+  // 14. Create SalaryStructure, PayrollRun, and Payslip tables & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "SalaryStructure" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT NOT NULL UNIQUE,
+        "schoolId" TEXT NOT NULL,
+        "baseSalary" REAL NOT NULL,
+        "allowances" REAL NOT NULL DEFAULT 0,
+        "deductions" REAL NOT NULL DEFAULT 0,
+        "netSalary" REAL NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SalaryStructure_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "SalaryStructure_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "SalaryStructure_userId_key" ON "SalaryStructure"("userId");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "SalaryStructure_schoolId_idx" ON "SalaryStructure"("schoolId");`)
+    console.log("✓ Created SalaryStructure table and indexes")
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "PayrollRun" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "month" INTEGER NOT NULL,
+        "year" INTEGER NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'DRAFT',
+        "totalAmount" REAL NOT NULL DEFAULT 0,
+        "runDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PayrollRun_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "PayrollRun_schoolId_month_year_key" ON "PayrollRun"("schoolId", "month", "year");`)
+    console.log("✓ Created PayrollRun table and indexes")
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "Payslip" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "payrollRunId" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "schoolId" TEXT NOT NULL,
+        "baseSalary" REAL NOT NULL,
+        "allowances" REAL NOT NULL,
+        "deductions" REAL NOT NULL,
+        "netPay" REAL NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "transactionId" TEXT UNIQUE,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Payslip_payrollRunId_fkey" FOREIGN KEY ("payrollRunId") REFERENCES "PayrollRun" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Payslip_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Payslip_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "Payslip_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "Transaction" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "Payslip_payrollRunId_userId_key" ON "Payslip"("payrollRunId", "userId");`)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "Payslip_transactionId_key" ON "Payslip"("transactionId");`)
+    console.log("✓ Created Payslip table and indexes")
+  } catch (err: any) {
+    console.log("Payroll schema error:", err.message)
+  }
+
+  console.log("✅ Turso database Salary & Payroll schema migration completed successfully!")
 }
 
 run()

@@ -176,6 +176,16 @@ enum AdmissionStatus {
   REJECTED
 }
 
+enum PayrollStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum PayslipStatus {
+  PENDING
+  PAID
+}
+
 // ============================================================
 // CORE USER MODELS
 // ============================================================
@@ -216,6 +226,8 @@ model User {
   leaveRequests              LeaveRequest[]           @relation("UserLeaveRequests")
   reviewedLeaves             LeaveRequest[]           @relation("LeaveReviewer")
   assignedAssets             Asset[]
+  salaryStructure            SalaryStructure?
+  payslips                   Payslip[]
 
   @@index([isArchived])
   @@index([schoolId])
@@ -1049,6 +1061,9 @@ model School {
   timetablePeriods TimetablePeriod[]
   assignments     Assignment[]
   admissionEnquiries AdmissionEnquiry[]
+  salaryStructures SalaryStructure[]
+  payrollRuns      PayrollRun[]
+  payslips         Payslip[]
 }
 
 // ============================================================
@@ -1069,6 +1084,7 @@ model Transaction {
   referenceId String?           @unique
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+  payslip     Payslip?
 
   @@index([schoolId])
   @@index([userId])
@@ -1236,6 +1252,68 @@ model AdmissionEnquiry {
   @@index([appliedForClassId])
   @@index([status])
   @@index([referenceNumber])
+}
+
+// ============================================================
+// SALARY & PAYROLL ENGINE
+// ============================================================
+
+model SalaryStructure {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  schoolId    String
+  
+  baseSalary  Float
+  allowances  Float    @default(0)
+  deductions  Float    @default(0)
+  netSalary   Float
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model PayrollRun {
+  id          String   @id @default(cuid())
+  schoolId    String
+  month       Int
+  year        Int
+  status      PayrollStatus @default(DRAFT)
+  totalAmount Float    @default(0)
+  runDate     DateTime @default(now())
+
+  payslips    Payslip[]
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, month, year])
+}
+
+model Payslip {
+  id            String   @id @default(cuid())
+  payrollRunId  String
+  userId        String
+  schoolId      String
+  
+  baseSalary    Float
+  allowances    Float
+  deductions    Float
+  netPay        Float
+  status        PayslipStatus @default(PENDING)
+  
+  transactionId String?  @unique
+
+  createdAt     DateTime @default(now())
+
+  payrollRun    PayrollRun   @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school        School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@unique([payrollRunId, userId])
 }
 
 

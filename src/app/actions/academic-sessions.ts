@@ -2,8 +2,8 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { AcademicSessionStatus, AcademicRecordStatus } from "@prisma/client";
 import { verifySession } from "@/lib/auth/session";
+import { logActivity } from "./logging";
 
 export async function getSessions() {
   return prisma.academicSession.findMany({
@@ -29,23 +29,26 @@ export async function createSession(data: { name: string; startDate: Date; endDa
       },
     });
 
-    await prisma.activityLog.create({
-      data: {
-        action: "SESSION_CREATED",
-        entityType: "AcademicSession",
-        entityId: session.id,
-        details: JSON.stringify({ name: session.name }),
-        actorId: user.id,
-      },
-    });
+    await logActivity(
+      "SESSION_CREATED",
+      "AcademicSession",
+      session.id,
+      JSON.stringify({ name: session.name }),
+      user.id
+    );
 
     revalidatePath("/admin/academic-session");
     return session;
   } catch (error: any) {
-    if (error.code === "P2002") {
+    const errorMsg = error?.message || error?.cause?.message || String(error);
+    if (
+      error.code === "P2002" ||
+      errorMsg.includes("UNIQUE constraint failed") ||
+      errorMsg.includes("already exists")
+    ) {
       throw new Error(`A session with the name "${data.name}" already exists.`);
     }
-    throw error;
+    throw new Error(errorMsg || "Failed to create academic session");
   }
 }
 
@@ -82,15 +85,13 @@ export async function activateSession(id: string) {
     },
   });
 
-  await prisma.activityLog.create({
-    data: {
-      action: "SESSION_ACTIVATED",
-      entityType: "AcademicSession",
-      entityId: id,
-      details: JSON.stringify({ name: newSession.name }),
-      actorId: user.id,
-    },
-  });
+  await logActivity(
+    "SESSION_ACTIVATED",
+    "AcademicSession",
+    id,
+    JSON.stringify({ name: newSession.name }),
+    user.id
+  );
 
   revalidatePath("/admin/academic-session");
   revalidatePath("/admin/settings");
@@ -133,15 +134,13 @@ export async function archiveSession(id: string) {
     });
   }
 
-  await prisma.activityLog.create({
-    data: {
-      action: "SESSION_ARCHIVED",
-      entityType: "AcademicSession",
-      entityId: id,
-      details: JSON.stringify({ name: session.name }),
-      actorId: user.id,
-    },
-  });
+  await logActivity(
+    "SESSION_ARCHIVED",
+    "AcademicSession",
+    id,
+    JSON.stringify({ name: session.name }),
+    user.id
+  );
 
   revalidatePath("/admin/academic-session");
   revalidatePath("/admin/settings");

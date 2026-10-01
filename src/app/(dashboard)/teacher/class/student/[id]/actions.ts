@@ -240,7 +240,8 @@ export async function finalizeRecord(
         entityType: "StudentAcademicRecord",
         entityId: `${studentId}_${academicSessionId}`,
         details: JSON.stringify({ studentId, academicSessionId, finalGrade }),
-        actorId: dbUser.id
+        actorId: dbUser.id,
+        userId: dbUser.id,
       }
     })
 

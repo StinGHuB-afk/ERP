@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { verifySession } from "@/lib/auth/session";
 import { checkEligibility, EligibilityStatus } from "@/lib/academic/grading";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "./logging";
 
 export type PromotionStudentData = {
   id: string;
@@ -146,15 +147,13 @@ export async function promoteStudents(studentIds: string[], destinationClassId: 
     }
   });
 
-  await prisma.activityLog.create({
-    data: {
-      action: "STUDENTS_PROMOTED",
-      entityType: "Class",
-      entityId: destinationClassId,
-      details: JSON.stringify({ count: studentIds.length, destinationClassId }),
-      actorId: session.userId,
-    }
-  });
+  await logActivity(
+    "STUDENTS_PROMOTED",
+    "Class",
+    destinationClassId,
+    JSON.stringify({ count: studentIds.length, destinationClassId }),
+    session.userId
+  );
 
   revalidatePath("/admin/promotions");
   revalidatePath("/teacher/class", "layout");

@@ -16,7 +16,11 @@ export async function logActivity(
         entityType,
         entityId,
         details,
-        actorId
+        actorId,
+        userId: actorId,
+        actionType: action,
+        targetEntity: entityType,
+        targetId: entityId ?? "",
       }
     })
   } catch (err) {

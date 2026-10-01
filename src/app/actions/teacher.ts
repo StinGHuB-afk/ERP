@@ -246,6 +246,7 @@ export async function bulkUpdateMarkStatus(markIds: string[], status: "PUBLISHED
           entityId: null,
           details: `Bulk updated ${targetIds.length} marks to ${status}`,
           actorId: session.userId,
+          userId: session.userId,
         },
       }),
     ])

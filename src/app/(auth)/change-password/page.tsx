@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function ChangePasswordPage() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-zinc-50 p-6 md:p-10 dark:bg-zinc-950">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <Card className="shadow-lg">
           <CardHeader className="space-y-2">

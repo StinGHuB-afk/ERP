@@ -26,100 +26,79 @@ type SidebarProps = {
   role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
   schoolName: string
   isClassTeacher?: boolean
+  effectiveTenantId?: string | null
 }
 
-export function Sidebar({ role, schoolName, isClassTeacher }: SidebarProps) {
+export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = null }: SidebarProps) {
   const pathname = usePathname()
 
   const getGroupedLinks = () => {
+    // Condition A: Global SaaS View
+    if (role === "SUPERADMIN" && effectiveTenantId === null) {
+      return [
+        {
+          group: "Overview",
+          items: [
+            { name: "SuperAdmin Hub", href: "/superadmin", icon: Shield },
+          ],
+        },
+        {
+          group: "SaaS Management",
+          items: [
+            { name: "Schools", href: "/superadmin", icon: Building2 },
+          ],
+        },
+        {
+          group: "System",
+          items: [
+            { name: "Global Settings", href: "/superadmin/settings", icon: Settings },
+          ],
+        },
+      ]
+    }
+
+    // Condition B: Tenant Operational View (Admin or Impersonating Superadmin)
+    if (role === "ADMIN" || (role === "SUPERADMIN" && effectiveTenantId !== null)) {
+      return [
+        {
+          group: "Overview",
+          items: [{ name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard }],
+        },
+        {
+          group: "Academics",
+          items: [
+            { name: "Classes", href: "/admin/classes", icon: BookOpen },
+            { name: "Subjects", href: "/admin/subjects", icon: FileText },
+            { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
+            { name: "Transport", href: "/admin/transport", icon: Bus },
+          ],
+        },
+        {
+          group: "People",
+          items: [
+            { name: "Teachers", href: "/admin/teachers", icon: Users },
+            { name: "Students", href: "/admin/students", icon: GraduationCap },
+          ],
+        },
+        {
+          group: "Communication",
+          items: [
+            { name: "Alerts", href: "/admin/alerts", icon: BellRing },
+            { name: "Announcements", href: "/admin/announcements", icon: Bell },
+          ],
+        },
+        {
+          group: "System",
+          items: [
+            { name: "Activity Log", href: "/admin/activity", icon: Activity },
+            { name: "Settings", href: "/admin/settings", icon: Building2 },
+          ],
+        },
+      ]
+    }
+
     switch (role) {
-      case "SUPERADMIN":
-      case Role.SUPERADMIN:
-        return [
-          {
-            group: "Overview",
-            items: [
-              { name: "SuperAdmin Hub", href: "/superadmin", icon: Shield },
-              { name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard },
-            ],
-          },
-          {
-            group: "SaaS Management",
-            items: [
-              { name: "Schools", href: "/superadmin", icon: Building2 },
-            ],
-          },
-          {
-            group: "Academics",
-            items: [
-              { name: "Classes", href: "/admin/classes", icon: BookOpen },
-              { name: "Subjects", href: "/admin/subjects", icon: FileText },
-              { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
-              { name: "Transport", href: "/admin/transport", icon: Bus },
-            ],
-          },
-          {
-            group: "People",
-            items: [
-              { name: "Teachers", href: "/admin/teachers", icon: Users },
-              { name: "Students", href: "/admin/students", icon: GraduationCap },
-            ],
-          },
-          {
-            group: "System",
-            items: [
-              { name: "Activity Log", href: "/admin/activity", icon: Activity },
-              { name: "Settings", href: "/admin/settings", icon: Building2 },
-            ],
-          },
-        ]
       case "PARENT":
-      case Role.PARENT:
-        return [
-          {
-            group: "Overview",
-            items: [{ name: "Parent Portal", href: "/parent", icon: LayoutDashboard }],
-          },
-        ]
-      case "ADMIN":
-      case Role.ADMIN:
-        return [
-          {
-            group: "Overview",
-            items: [{ name: "Dashboard", href: "/admin", icon: LayoutDashboard }],
-          },
-          {
-            group: "Academics",
-            items: [
-              { name: "Classes", href: "/admin/classes", icon: BookOpen },
-              { name: "Subjects", href: "/admin/subjects", icon: FileText },
-              { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
-              { name: "Transport", href: "/admin/transport", icon: Bus },
-            ],
-          },
-          {
-            group: "People",
-            items: [
-              { name: "Teachers", href: "/admin/teachers", icon: Users },
-              { name: "Students", href: "/admin/students", icon: GraduationCap },
-            ],
-          },
-          {
-            group: "Communication",
-            items: [
-              { name: "Alerts", href: "/admin/alerts", icon: BellRing },
-              { name: "Announcements", href: "/admin/announcements", icon: Bell },
-            ],
-          },
-          {
-            group: "System",
-            items: [
-              { name: "Activity Log", href: "/admin/activity", icon: Activity },
-              { name: "Settings", href: "/admin/settings", icon: Building2 },
-            ],
-          },
-        ]
-      case "TEACHER":
       case Role.TEACHER:
         return [
           {

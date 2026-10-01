@@ -1,9 +1,44 @@
 "use server"
 
+import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { verifySession } from "@/lib/auth/session"
 import { Role } from "@prisma/client"
+
+export async function getTenantList() {
+  const session = await verifySession()
+  if (!session || session.role !== Role.SUPERADMIN) {
+    return []
+  }
+
+  return prisma.school.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: { name: "asc" },
+  })
+}
+
+export async function setSuperadminTenantContext(schoolId: string | null) {
+  const session = await verifySession()
+  if (!session || session.role !== Role.SUPERADMIN) {
+    throw new Error("Unauthorized")
+  }
+
+  const cookieStore = await cookies()
+
+  if (schoolId) {
+    cookieStore.set("active_tenant_id", schoolId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    })
+  } else {
+    cookieStore.delete("active_tenant_id")
+  }
+}
 
 export interface CreateSchoolInput {
   name: string

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import prisma from "@/lib/prisma"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 
 export const dynamic = "force-dynamic"
 
@@ -12,6 +12,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await verifySession()
+  const effectiveTenantId = await getEffectiveTenantId()
 
   if (!session?.userId) {
     redirect("/login")
@@ -84,7 +85,7 @@ export default async function DashboardLayout({
     <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr] bg-slate-50">
       {/* Sidebar Desktop Shell */}
       <aside className="hidden border-r border-slate-200 bg-white md:block h-screen sticky top-0">
-        <Sidebar role={dbUser.role} schoolName={schoolName} isClassTeacher={isClassTeacher} />
+        <Sidebar role={dbUser.role} schoolName={schoolName} isClassTeacher={isClassTeacher} effectiveTenantId={effectiveTenantId} />
       </aside>
 
       {/* Main Content Column */}
@@ -98,6 +99,7 @@ export default async function DashboardLayout({
           schoolName={schoolName}
           isClassTeacher={isClassTeacher}
           unreadAlertsCount={unreadAlertsCount}
+          effectiveTenantId={effectiveTenantId}
         />
         {/* Content Area */}
         <main className="flex-1 p-6 lg:p-8 bg-slate-50">{children}</main>

@@ -11,26 +11,26 @@ export async function changePassword(formData: FormData) {
   const confirmPassword = formData.get("confirmPassword") as string
 
   if (!password || password.length < 8) {
-    throw new Error("Password must be at least 8 characters.")
+    return { error: "Password must be at least 8 characters." }
   }
 
   if (password !== confirmPassword) {
-    throw new Error("Passwords do not match.")
+    return { error: "Passwords do not match." }
   }
 
   const session = await verifySession(true)
   if (!session?.userId) {
-    throw new Error("Unauthorized")
+    return { error: "Unauthorized access. Please log in again." }
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } })
   if (!user) {
-    throw new Error("User not found")
+    return { error: "User not found." }
   }
 
   const isSamePassword = await bcrypt.compare(password, user.password)
   if (isSamePassword) {
-    throw new Error("New password cannot be the same as the current temporary password.")
+    return { error: "You cannot reuse the default password. Please choose a new, secure password." }
   }
 
   const hashedPassword = await bcrypt.hash(password, 10)

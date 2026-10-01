@@ -8,6 +8,8 @@ import { MobileNav } from "./mobile-nav"
 import { Role } from "@prisma/client"
 import { SessionSwitcher, AcademicSessionOption } from "./session-switcher"
 
+import { TenantSwitcher } from "./tenant-switcher"
+
 export function Header({
   userName,
   role,
@@ -17,6 +19,7 @@ export function Header({
   schoolName,
   isClassTeacher,
   unreadAlertsCount = 0,
+  effectiveTenantId = null,
 }: {
   userName: string | null
   role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"
@@ -26,6 +29,7 @@ export function Header({
   schoolName: string
   isClassTeacher?: boolean
   unreadAlertsCount?: number
+  effectiveTenantId?: string | null
 }) {
   const handleLogout = async () => {
     await logout()
@@ -44,6 +48,9 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Tenant Switcher (Superadmin Only) */}
+        <TenantSwitcher currentRole={role} initialTenantId={effectiveTenantId} />
+
         {/* Unread Alerts Link */}
         <Link
           href={alertHref}

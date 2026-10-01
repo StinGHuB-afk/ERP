@@ -70,5 +70,24 @@ export async function deleteSession() {
   }
 }
 
+export async function getEffectiveTenantId(): Promise<string | null> {
+  const session = await verifySession()
+  if (!session) {
+    return null
+  }
+
+  if (session.role === Role.ADMIN) {
+    return session.schoolId
+  }
+
+  if (session.role === Role.SUPERADMIN) {
+    const cookieStore = await cookies()
+    const activeTenantId = cookieStore.get("active_tenant_id")?.value
+    return activeTenantId || null
+  }
+
+  return session.schoolId ?? null
+}
+
 export { encrypt, decrypt }
 export type { SessionPayload }

@@ -16,8 +16,15 @@ export function ChangePasswordForm() {
     setIsPending(true)
     setError(null)
     try {
-      await changePassword(formData)
+      const res = await changePassword(formData)
+      if (res?.error) {
+        setError(res.error)
+        setIsPending(false)
+      }
     } catch (err: any) {
+      if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+        throw err
+      }
       setError(err.message || "Failed to update password")
       setIsPending(false)
     }

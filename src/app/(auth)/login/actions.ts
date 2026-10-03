@@ -78,8 +78,22 @@ export async function login(formData: FormData) {
   await silentRehashUserPassword(user.id, password, user.password)
   await createSession(user.id, user.role, user.mustChangePassword, user.schoolId)
 
+  const callbackUrl = formData.get("callbackUrl") as string | null
+
   // 9. Navigation
   if (user.mustChangePassword) redirect("/change-password")
+  
+  if (callbackUrl) {
+    try {
+      const parsedUrl = new URL(callbackUrl, "http://localhost") // Base doesn't matter for relative paths
+      if (parsedUrl.pathname.startsWith("/")) {
+        redirect(`${parsedUrl.pathname}${parsedUrl.search}`)
+      }
+    } catch {
+      // Ignore URL parsing errors and fallback to role-based routing
+    }
+  }
+
   if (user.role === Role.SUPERADMIN) redirect("/superadmin")
   if (user.role === Role.ADMIN) redirect("/admin")
   if (user.role === Role.TEACHER) redirect("/teacher")

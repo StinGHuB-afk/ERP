@@ -29,7 +29,7 @@ const formSchema = z.object({
   }),
 })
 
-export function LoginForm() {
+export function LoginForm({ sessionExpired, callbackUrl }: { sessionExpired?: boolean, callbackUrl?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -49,6 +49,9 @@ export function LoginForm() {
     const formData = new FormData()
     formData.append("email", values.email.trim())
     formData.append("password", values.password)
+    if (callbackUrl) {
+      formData.append("callbackUrl", callbackUrl)
+    }
     
     const result = await login(formData)
     
@@ -67,6 +70,12 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {sessionExpired && !error && (
+          <div className="mb-6 flex items-center gap-3 rounded-md bg-blue-50 border border-blue-200 p-4 text-sm text-blue-700">
+            <AlertCircle className="h-5 w-5 shrink-0 text-blue-600" />
+            <p className="font-medium">Your session has expired. Please sign in again to continue.</p>
+          </div>
+        )}
         {error && (
           <div className="mb-6 flex items-center gap-3 rounded-md bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
             <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />

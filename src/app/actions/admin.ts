@@ -91,6 +91,21 @@ export async function createStudent(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   try {
+    const existingStudent = await prisma.user.findFirst({
+      where: {
+        role: Role.STUDENT,
+        name: {
+          equals: parsed.data.name,
+          mode: 'insensitive',
+        },
+        schoolId,
+      },
+    })
+    
+    if (existingStudent) {
+      return { error: "A student with this exact name already exists in this school." }
+    }
+
     const password = await bcrypt.hash("Student@12345", 10)
     const activeSessionId = await getActiveSessionId()
 

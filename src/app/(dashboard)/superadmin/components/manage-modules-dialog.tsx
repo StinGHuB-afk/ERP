@@ -21,6 +21,13 @@ interface ManageModulesDialogProps {
   schoolName: string
 }
 
+const AVAILABLE_MODULES = [
+  { key: "PAYROLL", name: "Payroll & Salary", description: "Enable payroll runs and salary management." },
+  { key: "LIBRARY", name: "Library Management", description: "Enable book cataloging and circulation." },
+  { key: "TRANSPORT", name: "Transport & Fleet", description: "Enable route planning and vehicle tracking." },
+  { key: "FINANCE", name: "Finance & Fees", description: "Enable automated fee collection and accounting." },
+]
+
 export function ManageModulesDialog({ schoolId, schoolName }: ManageModulesDialogProps) {
   const [open, setOpen] = useState(false)
   const [modules, setModules] = useState<Record<string, boolean>>({})
@@ -46,7 +53,6 @@ export function ManageModulesDialog({ schoolId, schoolName }: ManageModulesDialo
         router.refresh()
       } catch (err) {
         console.error("Failed to toggle module", err)
-        // Revert on failure
         setModules(prev => ({ ...prev, [moduleKey]: !isEnabled }))
       }
     })
@@ -75,37 +81,30 @@ export function ManageModulesDialog({ schoolId, schoolName }: ManageModulesDialo
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 space-y-6">
+        <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-2">
           {isLoading ? (
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
             </div>
           ) : (
-            <>
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-semibold">Payroll & Salary</Label>
-                  <p className="text-sm text-slate-500">Enable payroll runs and salary management.</p>
+            <div className="space-y-4">
+              {AVAILABLE_MODULES.map((mod, index) => (
+                <div 
+                  key={mod.key} 
+                  className={`flex items-center justify-between pb-4 ${index !== AVAILABLE_MODULES.length - 1 ? 'border-b border-slate-100' : ''}`}
+                >
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-semibold">{mod.name}</Label>
+                    <p className="text-sm text-slate-500">{mod.description}</p>
+                  </div>
+                  <Switch 
+                    checked={!!modules[mod.key]} 
+                    onCheckedChange={(c) => handleToggle(mod.key, c)}
+                    disabled={isPending}
+                  />
                 </div>
-                <Switch 
-                  checked={!!modules["PAYROLL"]} 
-                  onCheckedChange={(c) => handleToggle("PAYROLL", c)}
-                  disabled={isPending}
-                />
-              </div>
-
-              <div className="flex items-center justify-between pb-2">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-semibold">Library Management</Label>
-                  <p className="text-sm text-slate-500">Enable book cataloging and circulation.</p>
-                </div>
-                <Switch 
-                  checked={!!modules["LIBRARY"]} 
-                  onCheckedChange={(c) => handleToggle("LIBRARY", c)}
-                  disabled={isPending}
-                />
-              </div>
-            </>
+              ))}
+            </div>
           )}
         </div>
       </DialogContent>

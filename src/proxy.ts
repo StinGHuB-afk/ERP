@@ -16,12 +16,18 @@ export async function proxy(request: NextRequest) {
   // Protected route enforcement
   if (isProtectedRoute) {
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/login", request.url), 307)
+      const loginUrl = new URL("/login", request.url)
+      loginUrl.searchParams.set("callbackUrl", encodeURI(request.url))
+      loginUrl.searchParams.set("session_expired", "true")
+      return NextResponse.redirect(loginUrl, 307)
     }
 
     const payload = await decrypt(sessionCookie)
     if (!payload?.userId) {
-      return NextResponse.redirect(new URL("/login", request.url), 307)
+      const loginUrl = new URL("/login", request.url)
+      loginUrl.searchParams.set("callbackUrl", encodeURI(request.url))
+      loginUrl.searchParams.set("session_expired", "true")
+      return NextResponse.redirect(loginUrl, 307)
     }
 
     // Role-based route protection

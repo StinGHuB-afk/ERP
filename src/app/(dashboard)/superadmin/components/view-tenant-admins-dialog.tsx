@@ -36,16 +36,18 @@ export function ViewTenantAdminsDialog({ schoolId, schoolName }: ViewTenantAdmin
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-xs text-slate-700 hover:text-slate-900 hover:bg-slate-100 ml-2"
-        >
-          <Shield className="h-3.5 w-3.5 text-slate-500" />
-          <span>Admins</span>
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs text-slate-700 hover:text-slate-900 hover:bg-slate-100 ml-2"
+          >
+            <Shield className="h-3.5 w-3.5 text-slate-500" />
+            <span>Admins</span>
+          </Button>
+        }
+      />
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Tenant Administrators</DialogTitle>

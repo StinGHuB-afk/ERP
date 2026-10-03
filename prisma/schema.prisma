@@ -1068,6 +1068,7 @@ model School {
   payslips         Payslip[]
   books            Book[]
   borrowRecords    BorrowRecord[]
+  activeModules    TenantModule[]
 }
 
 // ============================================================
@@ -1376,3 +1377,17 @@ model BorrowRecord {
   @@index([userId])
 }
 
+model TenantModule {
+  id          String   @id @default(cuid())
+  schoolId    String
+  
+  moduleKey   String   // e.g., "LIBRARY", "PAYROLL", "TRANSPORT", "FINANCE"
+  isEnabled   Boolean  @default(false)
+  
+  updatedAt   DateTime @updatedAt
+
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, moduleKey]) // A school can only have one toggle record per module
+  @@index([schoolId])
+}

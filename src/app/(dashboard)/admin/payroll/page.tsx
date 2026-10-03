@@ -1,9 +1,17 @@
 import { getPayrollDashboardData } from "@/app/actions/payroll.actions"
 import { PayrollDashboardClient } from "./components/PayrollDashboardClient"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminPayrollPage() {
+  const modules = await getTenantModules()
+  
+  if (!modules["PAYROLL"]) {
+    return <LockedModuleTeaser moduleName="Salary & Payroll Management" />
+  }
+
   const data = await getPayrollDashboardData()
 
   return (

@@ -1,6 +1,7 @@
 import { getSchools } from "@/app/actions/tenant.actions"
 import { CreateSchoolDialog } from "./components/create-school-dialog"
 import { ProvisionAdminDialog } from "./components/provision-admin-dialog"
+import { ManageModulesDialog } from "./components/manage-modules-dialog"
 import {
   Table,
   TableBody,
@@ -159,10 +160,16 @@ export default async function SuperAdminSchoolsPage() {
                     })}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ProvisionAdminDialog
-                      schoolId={school.id}
-                      schoolName={school.name}
-                    />
+                    <div className="flex justify-end items-center">
+                      <ProvisionAdminDialog
+                        schoolId={school.id}
+                        schoolName={school.name}
+                      />
+                      <ManageModulesDialog
+                        schoolId={school.id}
+                        schoolName={school.name}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

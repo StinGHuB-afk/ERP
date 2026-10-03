@@ -2,6 +2,8 @@ import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { getBooks, getBorrowRecords } from "@/app/actions/library.actions"
 import { LibraryOpacClient } from "@/components/library/LibraryOpacClient"
 import { redirect } from "next/navigation"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 
 export const dynamic = "force-dynamic"
 
@@ -13,6 +15,19 @@ export default async function ParentLibraryPage() {
 
   const effectiveTenantId = await getEffectiveTenantId()
   if (!effectiveTenantId) redirect("/")
+
+  const modules = await getTenantModules()
+  if (!modules["LIBRARY"]) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">School Library Catalog</h1>
+          <p className="text-sm text-slate-500">Explore available books in the school library.</p>
+        </div>
+        <LockedModuleTeaser moduleName="Library & Circulation Management" />
+      </div>
+    )
+  }
 
   const books = await getBooks(effectiveTenantId)
   const myBorrowRecords = await getBorrowRecords(effectiveTenantId, session.userId)

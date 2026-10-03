@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 import { Role, PayrollStatus, PayslipStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 
@@ -24,6 +25,8 @@ export async function upsertSalaryStructure(formData: FormData) {
     if (!schoolId) {
       throw new Error("Unauthorized: Active tenant context required.")
     }
+
+    await enforceModuleAccess("PAYROLL")
 
     const targetUserId =
       formData.get("targetUserId")?.toString() ||
@@ -102,6 +105,8 @@ export async function generatePayrollRun(month: number, year: number) {
     if (!schoolId) {
       throw new Error("Unauthorized: Active tenant context required.")
     }
+
+    await enforceModuleAccess("PAYROLL")
 
     const monthNum = Number(month)
     const yearNum = Number(year)
@@ -200,6 +205,8 @@ export async function executePayrollPayout(payrollRunId: string) {
     if (!schoolId) {
       throw new Error("Unauthorized: Active tenant context required.")
     }
+
+    await enforceModuleAccess("PAYROLL")
 
     if (!payrollRunId) {
       throw new Error("Payroll run ID is required.")

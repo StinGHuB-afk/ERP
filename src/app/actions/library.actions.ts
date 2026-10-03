@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session";
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions";
 
 /**
  * Ensures the current user has access to library operations.
@@ -77,6 +78,12 @@ export async function upsertBook(formData: FormData) {
       throw new Error("Insufficient permissions to manage books.");
     }
 
+    const tenantId = await getEffectiveTenantId();
+    if (!tenantId) {
+      throw new Error("Unauthorized: Active tenant context required.");
+    }
+    await enforceModuleAccess("LIBRARY");
+
     const id = formData.get("id") as string | null;
     const schoolId = formData.get("schoolId") as string;
     const title = formData.get("title") as string;
@@ -135,6 +142,12 @@ export async function borrowBook(bookId: string, userId: string, schoolId: strin
       throw new Error("Insufficient permissions to issue books.");
     }
 
+    const tenantId = await getEffectiveTenantId();
+    if (!tenantId) {
+      throw new Error("Unauthorized: Active tenant context required.");
+    }
+    await enforceModuleAccess("LIBRARY");
+
     return await prisma.$transaction(async (tx) => {
       const book = await tx.book.findUnique({ where: { id: bookId } });
       if (!book) throw new Error("Book not found");
@@ -175,6 +188,12 @@ export async function returnBook(borrowRecordId: string, isLost: boolean = false
     if (!["SUPERADMIN", "ADMIN", "LIBRARIAN"].includes(session.role)) {
       throw new Error("Insufficient permissions to process returns.");
     }
+
+    const tenantId = await getEffectiveTenantId();
+    if (!tenantId) {
+      throw new Error("Unauthorized: Active tenant context required.");
+    }
+    await enforceModuleAccess("LIBRARY");
 
     return await prisma.$transaction(async (tx) => {
       const record = await tx.borrowRecord.findUnique({ where: { id: borrowRecordId } });

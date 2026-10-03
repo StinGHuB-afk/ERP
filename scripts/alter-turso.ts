@@ -500,6 +500,25 @@ async function run() {
     console.log("Library schema error:", err.message)
   }
 
+  // 16. Create TenantModule table & indexes
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS "TenantModule" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "schoolId" TEXT NOT NULL,
+        "moduleKey" TEXT NOT NULL,
+        "isEnabled" BOOLEAN NOT NULL DEFAULT 0,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "TenantModule_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "TenantModule_schoolId_moduleKey_key" ON "TenantModule"("schoolId", "moduleKey");`)
+    await client.execute(`CREATE INDEX IF NOT EXISTS "TenantModule_schoolId_idx" ON "TenantModule"("schoolId");`)
+    console.log("✓ Created TenantModule table and indexes")
+  } catch (err: any) {
+    console.log("TenantModule schema error:", err.message)
+  }
+
   console.log("✅ Turso database schema migration completed successfully!")
 }
 

@@ -26,6 +26,10 @@ const AVAILABLE_MODULES = [
   { key: "LIBRARY", name: "Library Management", description: "Enable book cataloging and circulation." },
   { key: "TRANSPORT", name: "Transport & Fleet", description: "Enable route planning and vehicle tracking." },
   { key: "FINANCE", name: "Finance & Fees", description: "Enable automated fee collection and accounting." },
+  { key: "ASSETS", name: "Asset Management", description: "Enable school inventory and asset tracking." },
+  { key: "LEAVES", name: "Leave Management", description: "Enable staff and student leave requests." },
+  { key: "ADMISSIONS", name: "Admissions", description: "Enable online student admission enquiries." },
+  { key: "HEALTH", name: "Health & Clinic", description: "Enable student health records and clinic visits." },
 ]
 
 export function ManageModulesDialog({ schoolId, schoolName }: ManageModulesDialogProps) {

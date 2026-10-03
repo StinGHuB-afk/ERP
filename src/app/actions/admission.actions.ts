@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { Role, AdmissionStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 
 export interface SubmitAdmissionEnquiryInput {
   schoolId: string

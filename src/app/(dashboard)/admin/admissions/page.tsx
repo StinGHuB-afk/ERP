@@ -2,6 +2,8 @@ import { getAdmissionEnquiries } from "@/app/actions/admission.actions"
 import { ManageApplicationDialog } from "./components/manage-application-dialog"
 import { CreateApplicationDialog } from "./components/create-application-dialog"
 import prisma from "@/lib/prisma"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -54,6 +56,23 @@ function getStatusBadgeStyle(status: string): string {
 }
 
 export default async function AdminAdmissionsPage() {
+  const modules = await getTenantModules()
+  if (!modules["ADMISSIONS"]) {
+    return (
+      <div className="space-y-6 p-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Online Admissions & Application Funnel
+          </h1>
+          <p className="text-sm text-slate-500">
+            Review public student admission applications, conduct evaluations, and convert approved applicants.
+          </p>
+        </div>
+        <LockedModuleTeaser moduleName="Admissions" />
+      </div>
+    )
+  }
+
   const enquiries = await getAdmissionEnquiries()
   const classes = await prisma.class.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
   const school = await prisma.school.findFirst({ select: { id: true } })

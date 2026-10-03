@@ -92,7 +92,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           items: [
             { name: "Teachers", href: "/admin/teachers", icon: Users },
             { name: "Students", href: "/admin/students", icon: GraduationCap },
-            { name: "Online Admissions", href: "/admin/admissions", icon: UserCheck },
+            { name: "Online Admissions", href: "/admin/admissions", icon: UserCheck, moduleKey: "ADMISSIONS" },
           ],
         },
         {
@@ -169,7 +169,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
             group: "People & Workflow",
             items: [
               { name: "Profile Requests", href: "/teacher/profile-requests", icon: UserCheck },
-              { name: "Leave Requests", href: "/teacher/leave", icon: Briefcase },
+              { name: "Leave Requests", href: "/teacher/leave", icon: Briefcase, moduleKey: "LEAVES" },
             ],
           },
           {
@@ -197,7 +197,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           {
             group: "Communication & Workflow",
             items: [
-              { name: "Leave Requests", href: "/student/leave", icon: Briefcase },
+              { name: "Leave Requests", href: "/student/leave", icon: Briefcase, moduleKey: "LEAVES" },
               { name: "Inbox", href: "/student/alerts", icon: BellRing },
             ],
           },

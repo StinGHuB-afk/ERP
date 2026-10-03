@@ -94,10 +94,7 @@ export async function createStudent(formData: FormData) {
     const existingStudent = await prisma.user.findFirst({
       where: {
         role: Role.STUDENT,
-        name: {
-          equals: parsed.data.name,
-          mode: 'insensitive',
-        },
+        name: parsed.data.name,
         schoolId,
       },
     })

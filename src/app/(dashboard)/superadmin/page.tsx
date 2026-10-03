@@ -2,6 +2,7 @@ import { getSchools } from "@/app/actions/tenant.actions"
 import { CreateSchoolDialog } from "./components/create-school-dialog"
 import { ProvisionAdminDialog } from "./components/provision-admin-dialog"
 import { ManageModulesDialog } from "./components/manage-modules-dialog"
+import { ViewTenantAdminsDialog } from "./components/view-tenant-admins-dialog"
 import {
   Table,
   TableBody,
@@ -166,6 +167,10 @@ export default async function SuperAdminSchoolsPage() {
                         schoolName={school.name}
                       />
                       <ManageModulesDialog
+                        schoolId={school.id}
+                        schoolName={school.name}
+                      />
+                      <ViewTenantAdminsDialog
                         schoolId={school.id}
                         schoolName={school.name}
                       />

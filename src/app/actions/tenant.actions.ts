@@ -146,3 +146,28 @@ export async function provisionTenantAdmin(data: ProvisionTenantAdminInput) {
 
   return { success: true, userId: user.id }
 }
+
+export async function getTenantAdmins(schoolId: string) {
+  const session = await verifySession()
+  if (!session || session.role !== Role.SUPERADMIN) {
+    throw new Error("Unauthorized: SuperAdmin access required.")
+  }
+
+  return prisma.user.findMany({
+    where: {
+      schoolId,
+      role: {
+        in: [Role.ADMIN, Role.SUPERADMIN]
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+    },
+    orderBy: {
+      createdAt: "asc"
+    }
+  })
+}

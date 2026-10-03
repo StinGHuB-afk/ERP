@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { Role, TransactionType, TransactionStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 
 export interface CreateFeeStructureInput {
   title: string
@@ -46,6 +47,7 @@ export async function createFeeStructure(data: CreateFeeStructureInput) {
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }
+  await enforceModuleAccess("FINANCE")
 
   if (!schoolId) {
     throw new Error("School context required to create a fee structure.")
@@ -100,6 +102,7 @@ export async function recordTransaction(data: RecordTransactionInput) {
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }
+  await enforceModuleAccess("FINANCE")
 
   if (!schoolId) {
     throw new Error("School context required to record transaction.")

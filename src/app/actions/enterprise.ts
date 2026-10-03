@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 import { ProfileEventType, TransportRequestStatus, TransportAssignmentStatus, ProfileUpdateStatus } from "@prisma/client"
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 
 import {
   RequestedProfileData,
@@ -84,6 +85,8 @@ export async function requestTransportChange(data: RequestTransportChangeInput) 
     if (!session || !session.isAuth) {
       return { success: false, error: "Unauthorized: Authentication required." }
     }
+    
+    await enforceModuleAccess("TRANSPORT")
 
     const student = await prisma.student.findUnique({
       where: { id: data.studentId },
@@ -181,6 +184,8 @@ export async function processTransportRequest(
     if (!session || !session.isAuth) {
       return { success: false, error: "Unauthorized: Authentication required." }
     }
+    
+    await enforceModuleAccess("TRANSPORT")
 
     // RBAC: Strictly Admin only
     if (session.role !== "ADMIN" && session.role !== "SUPERADMIN") {

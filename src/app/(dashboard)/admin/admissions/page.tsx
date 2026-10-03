@@ -1,5 +1,7 @@
 import { getAdmissionEnquiries } from "@/app/actions/admission.actions"
 import { ManageApplicationDialog } from "./components/manage-application-dialog"
+import { CreateApplicationDialog } from "./components/create-application-dialog"
+import prisma from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -53,6 +55,9 @@ function getStatusBadgeStyle(status: string): string {
 
 export default async function AdminAdmissionsPage() {
   const enquiries = await getAdmissionEnquiries()
+  const classes = await prisma.class.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+  const school = await prisma.school.findFirst({ select: { id: true } })
+  const schoolId = school?.id || ""
 
   const totalCount = enquiries.length
   const pendingCount = enquiries.filter((e) => e.status === "PENDING").length
@@ -73,10 +78,7 @@ export default async function AdminAdmissionsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5">
-            <UserPlus className="h-4 w-4" />
-            New Application
-          </Button>
+          <CreateApplicationDialog classes={classes} schoolId={schoolId} />
         </div>
       </div>
 

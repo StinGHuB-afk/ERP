@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { getClassTeacherClassIds } from "@/lib/auth/teacher-authorization"
 import { Textarea } from "@/components/ui/textarea"
 import { UpdateHealthRecordForm } from "@/components/forms/UpdateHealthRecordForm"
@@ -87,8 +87,8 @@ export default async function StudentProfilePage(
         <p className="text-slate-500 max-w-md mb-4">
           You are not the assigned class teacher for {student.class.name} in the current session. Only the class teacher can view full academic profiles.
         </p>
-        <Link href="/teacher/class">
-          <Button variant="outline">Return to My Class</Button>
+        <Link href="/teacher/class" className={buttonVariants({ variant: "outline" })}>
+          Return to My Class
         </Link>
       </div>
     )

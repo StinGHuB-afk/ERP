@@ -24,6 +24,7 @@ import {
   Briefcase,
   Layers,
   ArrowUpRight,
+  Lock,
 } from "lucide-react"
 
 type SidebarProps = {
@@ -31,10 +32,16 @@ type SidebarProps = {
   schoolName: string
   isClassTeacher?: boolean
   effectiveTenantId?: string | null
+  enabledModules?: string[]
 }
 
-export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = null }: SidebarProps) {
+export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = null, enabledModules = [] }: SidebarProps) {
   const pathname = usePathname()
+
+  const isModuleEnabled = (moduleKey?: string) => {
+    if (!moduleKey) return true; // Core modules are always enabled
+    return enabledModules.includes(moduleKey);
+  }
 
   const getGroupedLinks = () => {
     // Condition A: Global SaaS View
@@ -76,8 +83,8 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
             { name: "Attendance", href: "/admin/attendance", icon: CalendarDays },
             { name: "Academic Sessions", href: "/admin/academic-session", icon: CalendarDays },
             { name: "Promotions & Rollover", href: "/admin/promotions", icon: ArrowUpRight },
-            { name: "Library Catalog", href: "/admin/library", icon: BookOpen },
-            { name: "Transport", href: "/admin/transport", icon: Bus },
+            { name: "Library Catalog", href: "/admin/library", icon: BookOpen, moduleKey: "LIBRARY" },
+            { name: "Transport", href: "/admin/transport", icon: Bus, moduleKey: "TRANSPORT" },
           ],
         },
         {
@@ -98,8 +105,8 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
         {
           group: "Finance & Operations",
           items: [
-            { name: "Finance & Fees", href: "/admin/finance", icon: DollarSign },
-            { name: "Payroll", href: "/admin/payroll", icon: DollarSign },
+            { name: "Finance & Fees", href: "/admin/finance", icon: DollarSign, moduleKey: "FINANCE" },
+            { name: "Payroll", href: "/admin/payroll", icon: DollarSign, moduleKey: "PAYROLL" },
             { name: "Operations & Assets", href: "/admin/operations", icon: Briefcase },
             { name: "Activity Log", href: "/admin/activity", icon: Activity },
             { name: "Settings", href: "/admin/settings", icon: Building2 },
@@ -113,7 +120,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
         {
           group: "Library Management",
           items: [
-            { name: "Library Catalog", href: "/librarian", icon: BookOpen },
+            { name: "Library Catalog", href: "/librarian", icon: BookOpen, moduleKey: "LIBRARY" },
           ],
         },
       ]
@@ -127,7 +134,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
         },
         {
           group: "Academics & Resources",
-          items: [{ name: "Library Catalog", href: "/parent/library", icon: BookOpen }],
+          items: [{ name: "Library Catalog", href: "/parent/library", icon: BookOpen, moduleKey: "LIBRARY" }],
         },
         {
           group: "Communication",
@@ -155,7 +162,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
               { name: "Enter Marks", href: "/teacher/marks", icon: FileText },
               { name: "At-Risk Early Alert", href: "/teacher/at-risk", icon: Activity },
               { name: "Notes & Hub", href: "/teacher/notes", icon: BookOpen },
-              { name: "Library Catalog", href: "/teacher/library", icon: BookOpen },
+              { name: "Library Catalog", href: "/teacher/library", icon: BookOpen, moduleKey: "LIBRARY" },
             ],
           },
           {
@@ -184,7 +191,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
             group: "Academics",
             items: [
               { name: "Learning Hub", href: "/student/learning-hub", icon: BookOpen },
-              { name: "Library Catalog", href: "/student/library", icon: BookOpen },
+              { name: "Library Catalog", href: "/student/library", icon: BookOpen, moduleKey: "LIBRARY" },
             ],
           },
           {
@@ -224,25 +231,33 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
                 {section.items.map((link) => {
                   const Icon = link.icon
                   const isActive = pathname === link.href || (link.href !== "/admin" && link.href !== "/teacher" && link.href !== "/student" && link.href !== "/parent" && link.href !== "/superadmin" && pathname.startsWith(link.href))
+                  const isLocked = !isModuleEnabled(link.moduleKey)
 
                   return (
                     <Link
                       key={link.name}
                       href={link.href}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium transition-colors group",
-                        isActive
+                        "flex items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors group",
+                        isActive && !isLocked
                           ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          : isLocked
+                            ? "text-slate-400 cursor-not-allowed opacity-80 bg-slate-50/50"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       )}
                     >
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 flex-shrink-0",
-                          isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-                        )}
-                      />
-                      <span className="truncate">{link.name}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 flex-shrink-0",
+                            isActive && !isLocked ? "text-blue-600" : isLocked ? "text-slate-300" : "text-slate-400 group-hover:text-slate-600"
+                          )}
+                        />
+                        <span className="truncate">{link.name}</span>
+                      </div>
+                      {isLocked && (
+                        <Lock className="h-3.5 w-3.5 text-slate-300 flex-shrink-0 ml-2" />
+                      )}
                     </Link>
                   )
                 })}

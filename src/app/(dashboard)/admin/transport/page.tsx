@@ -6,11 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { TransportRequestActions } from "./transport-request-actions"
 import { Bus, Clock, CheckCircle2, XCircle, Users, ArrowRight, ShieldCheck } from "lucide-react"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 
 export default async function AdminTransportPage() {
   const session = await verifySession()
   if (!session || (session.role !== "ADMIN" && session.role !== "SUPERADMIN")) {
     redirect("/login")
+  }
+
+  const modules = await getTenantModules()
+  if (!modules["TRANSPORT"]) {
+    return <LockedModuleTeaser moduleName="Transport & Fleet Management" />
   }
 
   const [pendingRequests, activeAssignments, recentProcessed] = await Promise.all([

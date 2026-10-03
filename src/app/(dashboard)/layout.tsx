@@ -81,11 +81,20 @@ export default async function DashboardLayout({
     },
   })
 
+  let enabledModules: string[] = []
+  if (effectiveTenantId) {
+    const tenantModules = await prisma.tenantModule.findMany({
+      where: { schoolId: effectiveTenantId, isEnabled: true },
+      select: { moduleKey: true },
+    })
+    enabledModules = tenantModules.map(m => m.moduleKey)
+  }
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr] bg-slate-50">
       {/* Sidebar Desktop Shell */}
       <aside className="hidden border-r border-slate-200 bg-white md:block h-screen sticky top-0">
-        <Sidebar role={dbUser.role} schoolName={schoolName} isClassTeacher={isClassTeacher} effectiveTenantId={effectiveTenantId} />
+        <Sidebar role={dbUser.role} schoolName={schoolName} isClassTeacher={isClassTeacher} effectiveTenantId={effectiveTenantId} enabledModules={enabledModules} />
       </aside>
 
       {/* Main Content Column */}

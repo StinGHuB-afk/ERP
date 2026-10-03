@@ -24,11 +24,18 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
 } from "lucide-react"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminFinancePage() {
   const session = await verifySession()
+
+  const modules = await getTenantModules()
+  if (!modules["FINANCE"]) {
+    return <LockedModuleTeaser moduleName="Finance & Unified Ledger" />
+  }
 
   const [transactions, feeStructures, classes] = await Promise.all([
     getTransactions(),

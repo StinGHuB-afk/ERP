@@ -61,7 +61,7 @@ export async function verifyTeacherAssignmentAccess({
     return { isAuthorized: false }
   }
 
-  // 2. Check Active Class Teacher Assignment (Homeroom access)
+  // 2. Check Active Class Teacher Assignment (Class access)
   const classAssignment = await prisma.classTeacherAssignment.findFirst({
     where: {
       teacherId: teacher.id,
@@ -75,7 +75,19 @@ export async function verifyTeacherAssignmentAccess({
     return { isAuthorized: true, teacherId: teacher.id }
   }
 
-  // 3. Check Active Subject Teaching Assignment (Subject access)
+  // 3. Check Direct Class teacherId relation
+  const directClass = await prisma.class.findFirst({
+    where: {
+      id: classId,
+      teacherId: teacher.id,
+    },
+  })
+
+  if (directClass) {
+    return { isAuthorized: true, teacherId: teacher.id }
+  }
+
+  // 4. Check Active Subject Teaching Assignment (Subject access)
   const teachingAssignment = await prisma.teachingAssignment.findFirst({
     where: {
       teacherId: teacher.id,
@@ -88,6 +100,34 @@ export async function verifyTeacherAssignmentAccess({
 
   if (teachingAssignment) {
     return { isAuthorized: true, teacherId: teacher.id }
+  }
+
+  // 5. Check Direct Subject teacherId relation
+  const directSubject = await prisma.subject.findFirst({
+    where: {
+      teacherId: teacher.id,
+      ...(classId ? { classId } : {}),
+      ...(subjectId ? { id: subjectId } : {}),
+    },
+  })
+
+  if (directSubject) {
+    return { isAuthorized: true, teacherId: teacher.id }
+  }
+
+  // 6. Check if class belongs to teacher's school
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { schoolId: true, role: true },
+  })
+
+  if (user?.role === "TEACHER" && user.schoolId) {
+    const classInSchool = await prisma.class.findFirst({
+      where: { id: classId, schoolId: user.schoolId },
+    })
+    if (classInSchool) {
+      return { isAuthorized: true, teacherId: teacher.id }
+    }
   }
 
   return { isAuthorized: false, teacherId: teacher.id }

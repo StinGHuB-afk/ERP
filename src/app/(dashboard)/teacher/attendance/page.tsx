@@ -35,16 +35,16 @@ export default async function TeacherAttendancePage(
     )
   }
 
-  // Find Homeroom Classes via ClassTeacherAssignment
+  // Find Class Teacher Classes via ClassTeacherAssignment
   const classAssignments = await getClassTeacherAssignments(teacherUser.teacher.id, activeSessionId)
   const classIds = classAssignments.map(a => a.classId)
 
-  const homeroomClasses = await prisma.class.findMany({
+  const classTeacherClasses = await prisma.class.findMany({
     where: { id: { in: classIds } },
   })
 
   // Enhance classes with their ACTIVE enrolled students
-  const classesWithStudents = await Promise.all(homeroomClasses.map(async (cls) => {
+  const classesWithStudents = await Promise.all(classTeacherClasses.map(async (cls) => {
     const enrollments = await prisma.studentEnrollment.findMany({
       where: {
         classId: cls.id,
@@ -94,7 +94,7 @@ export default async function TeacherAttendancePage(
 
       {classesWithStudents.length === 0 ? (
         <div className="rounded-xl border bg-white p-12 text-center text-slate-500 shadow-sm">
-          You are not currently assigned as a homeroom teacher for any classes.
+          You are not currently assigned as a class teacher for any classes.
         </div>
       ) : (
         classesWithStudents.map((cls) => (

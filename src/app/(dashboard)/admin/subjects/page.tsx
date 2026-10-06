@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { Prisma } from "@prisma/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SubjectForm } from "./subject-form"
@@ -13,6 +14,9 @@ export default async function AdminSubjectsPage(
   const query = searchParams.q || ""
   const page = parseInt(searchParams.page || "1")
   const pageSize = 10
+  
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
 
   const whereCondition: Prisma.SubjectWhereInput = {
     OR: [
@@ -32,7 +36,7 @@ export default async function AdminSubjectsPage(
       take: pageSize,
     }),
     prisma.subject.count({ where: whereCondition }),
-    prisma.teacher.findMany({ include: { user: true }, orderBy: { user: { name: 'asc' } } })
+    prisma.teacher.findMany({ where: { user: { schoolId: tenantId } }, include: { user: true }, orderBy: { user: { name: 'asc' } } })
   ])
 
   const mappedTeachers = (Array.isArray(teachers) ? teachers : []).map(t => ({ id: t.id, name: t.user.name }))

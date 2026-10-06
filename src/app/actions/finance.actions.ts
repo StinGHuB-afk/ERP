@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { Role, TransactionType, TransactionStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
@@ -30,16 +30,14 @@ async function resolveTenantContext(overrideSchoolId?: string) {
   if (!session) {
     throw new Error("Unauthorized: Authentication required.")
   }
+  const effectiveTenantId = await getEffectiveTenantId()
+  const schoolId = overrideSchoolId || effectiveTenantId || null
 
-  if (session.role === Role.SUPERADMIN) {
-    return { session, schoolId: overrideSchoolId || session.schoolId || null }
-  }
-
-  if (!session.schoolId) {
+  if (session.role !== Role.SUPERADMIN && !schoolId) {
     throw new Error("Orphaned account: No school association found.")
   }
 
-  return { session, schoolId: session.schoolId }
+  return { session, schoolId }
 }
 
 export async function createFeeStructure(data: CreateFeeStructureInput) {

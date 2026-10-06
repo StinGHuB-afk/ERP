@@ -154,6 +154,10 @@ export async function borrowBook(bookId: string, userId: string, schoolId: strin
       if (book.schoolId !== schoolId) throw new Error("Book does not belong to this school");
       if (book.availableCopies <= 0) throw new Error("No available copies of this book");
 
+      const targetUser = await tx.user.findUnique({ where: { id: userId } });
+      if (!targetUser) throw new Error("User not found");
+      if (targetUser.schoolId !== schoolId) throw new Error("User does not belong to this school");
+
       // Decrement available copies
       await tx.book.update({
         where: { id: bookId },
@@ -230,3 +234,100 @@ export async function returnBook(borrowRecordId: string, isLost: boolean = false
     revalidatePath("/librarian/circulation");
   }
 }
+
+export async function sendLibraryOverdueAlerts(schoolId: string, finePerDay: number = 10) {
+  try {
+    const session = await verifyLibraryAccess();
+    if (!["SUPERADMIN", "ADMIN", "LIBRARIAN"].includes(session.role)) {
+      throw new Error("Insufficient permissions to dispatch library alerts.");
+    }
+
+    const tenantId = (await getEffectiveTenantId()) || schoolId;
+    if (!tenantId) {
+      throw new Error("Active tenant context required.");
+    }
+
+    await enforceModuleAccess("LIBRARY");
+
+    const now = new Date();
+    const activeBorrows = await prisma.borrowRecord.findMany({
+      where: { schoolId: tenantId, status: "BORROWED" },
+      include: {
+        book: { select: { title: true } },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    if (activeBorrows.length === 0) {
+      return { success: true, count: 0, message: "No active borrowed books found." };
+    }
+
+    let alertsCount = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (const record of activeBorrows) {
+        const dueDate = new Date(record.dueDate);
+        const diffTime = now.getTime() - dueDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        let title = "";
+        let message = "";
+        let priority: "INFO" | "NOTICE" | "WARNING" | "URGENT" = "INFO";
+        let requiresAck = false;
+
+        if (diffDays > 0) {
+          const totalFine = diffDays * finePerDay;
+          title = `OVERDUE NOTICE: '${record.book.title}'`;
+          message = `Dear ${record.user.name || "Borrower"},\n\nYour borrowed book '${record.book.title}' was due on ${dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} and is currently ${diffDays} day(s) OVERDUE.\n\nAn overdue fine of ₹${totalFine} (calculated at ₹${finePerDay}/day as per school library policy) is currently imposed. Please return the book to the library immediately to prevent further fine accumulation.`;
+          priority = diffDays > 7 ? "URGENT" : "WARNING";
+          requiresAck = true;
+        } else if (diffDays >= -3) {
+          const daysLeft = Math.abs(diffDays);
+          title = `DUE SOON: '${record.book.title}'`;
+          message = `Dear ${record.user.name || "Borrower"},\n\nThis is a reminder that your borrowed book '${record.book.title}' is due for return in ${daysLeft === 0 ? "today" : daysLeft + " day(s)"} on ${dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}.\n\nPlease return or renew the book on time to avoid overdue fines of ₹${finePerDay}/day according to school library policy.`;
+          priority = "NOTICE";
+          requiresAck = false;
+        } else {
+          continue;
+        }
+
+        const alert = await tx.alert.create({
+          data: {
+            title,
+            message,
+            priority,
+            requiresAcknowledgement: requiresAck,
+            status: "PUBLISHED",
+            publishedAt: now,
+            creatorId: session.userId,
+            targetType: "SPECIFIC_STUDENTS",
+          },
+        });
+
+        await tx.alertRecipient.create({
+          data: {
+            alertId: alert.id,
+            userId: record.userId,
+          },
+        });
+
+        alertsCount++;
+      }
+    });
+
+    revalidatePath("/librarian");
+    revalidatePath("/admin/library");
+    revalidatePath("/student/library");
+    revalidatePath("/teacher/library");
+
+    return {
+      success: true,
+      count: alertsCount,
+      message: `Successfully dispatched ${alertsCount} library due/overdue alerts with fine policy details!`,
+    };
+  } catch (error: any) {
+    console.error("Failed to dispatch library overdue alerts:", error);
+    return { error: error.message || "Failed to dispatch library alerts." };
+  }
+}
+

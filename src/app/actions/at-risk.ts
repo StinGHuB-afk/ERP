@@ -37,19 +37,44 @@ async function resolveActiveSessionId(): Promise<string | null> {
 
 async function resolveTeacherClassId(userId: string, sessionId: string): Promise<string | null> {
   const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { id: true } })
-  if (!teacher) return null
+  
+  if (teacher) {
+    const classAssign = await prisma.classTeacherAssignment.findFirst({
+      where: { teacherId: teacher.id, academicSessionId: sessionId, isActive: true },
+      select: { classId: true },
+    })
+    if (classAssign) return classAssign.classId
 
-  const classAssign = await prisma.classTeacherAssignment.findFirst({
-    where: { teacherId: teacher.id, academicSessionId: sessionId, isActive: true },
-    select: { classId: true },
-  })
-  if (classAssign) return classAssign.classId
+    const teachAssign = await prisma.teachingAssignment.findFirst({
+      where: { teacherId: teacher.id, academicSessionId: sessionId, isActive: true },
+      select: { classId: true },
+    })
+    if (teachAssign) return teachAssign.classId
 
-  const teachAssign = await prisma.teachingAssignment.findFirst({
-    where: { teacherId: teacher.id, academicSessionId: sessionId, isActive: true },
-    select: { classId: true },
-  })
-  return teachAssign?.classId ?? null
+    const directClass = await prisma.class.findFirst({
+      where: { teacherId: teacher.id },
+      select: { id: true },
+    })
+    if (directClass) return directClass.id
+
+    const subjectClass = await prisma.subject.findFirst({
+      where: { teacherId: teacher.id },
+      select: { classes: { select: { id: true }, take: 1 } },
+    })
+    if (subjectClass?.classes?.[0]?.id) return subjectClass.classes[0].id
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { schoolId: true } })
+  if (user?.schoolId) {
+    const schoolClass = await prisma.class.findFirst({
+      where: { schoolId: user.schoolId },
+      select: { id: true },
+    })
+    if (schoolClass) return schoolClass.id
+  }
+
+  const globalClass = await prisma.class.findFirst({ select: { id: true } })
+  return globalClass?.id ?? null
 }
 
 export async function getAtRiskStudentsForTeacher(classId?: string) {

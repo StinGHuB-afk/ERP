@@ -107,7 +107,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           items: [
             { name: "Finance & Fees", href: "/admin/finance", icon: DollarSign, moduleKey: "FINANCE" },
             { name: "Payroll", href: "/admin/payroll", icon: DollarSign, moduleKey: "PAYROLL" },
-            { name: "Operations & Assets", href: "/admin/operations", icon: Briefcase },
+            { name: "Operations & Assets", href: "/admin/operations", icon: Briefcase, moduleKey: "ASSETS" },
             { name: "Activity Log", href: "/admin/activity", icon: Activity },
             { name: "Settings", href: "/admin/settings", icon: Building2 },
           ],
@@ -151,7 +151,7 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
             group: "Overview",
             items: [
               { name: "Dashboard", href: "/teacher", icon: LayoutDashboard },
-              ...(isClassTeacher ? [{ name: "My Homeroom", href: "/teacher/class", icon: Users }] : []),
+              ...(isClassTeacher ? [{ name: "My Class", href: "/teacher/class", icon: Users }] : []),
             ],
           },
           {
@@ -207,7 +207,27 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
     }
   }
 
-  const groupedNav = getGroupedLinks()
+  const rawGroupedNav = getGroupedLinks()
+  const isAdminRole = String(role) === "ADMIN" || String(role) === "SUPERADMIN"
+
+  // Filter links for non-admin roles so disabled modules are completely hidden without lock teasers
+  const groupedNav = rawGroupedNav
+    .map((section) => {
+      const visibleItems = section.items.filter((item) => {
+        // Superadmin is restricted from viewing tenant financial ledgers and payroll data for privacy
+        if (String(role) === "SUPERADMIN" && (item.href === "/admin/finance" || item.href === "/admin/payroll")) {
+          return false
+        }
+        if (isAdminRole) return true
+        if (item.moduleKey && !isModuleEnabled(item.moduleKey)) return false
+        return true
+      })
+      return {
+        ...section,
+        items: visibleItems,
+      }
+    })
+    .filter((section) => section.items.length > 0)
 
   return (
     <div className="flex h-full w-full flex-col bg-white text-slate-900 border-r border-slate-200">
@@ -231,12 +251,13 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
                 {section.items.map((link) => {
                   const Icon = link.icon
                   const isActive = pathname === link.href || (link.href !== "/admin" && link.href !== "/teacher" && link.href !== "/student" && link.href !== "/parent" && link.href !== "/superadmin" && pathname.startsWith(link.href))
-                  const isLocked = !isModuleEnabled(link.moduleKey)
+                  const isLocked = isAdminRole && !isModuleEnabled(link.moduleKey)
 
                   return (
                     <Link
                       key={link.name}
-                      href={link.href}
+                      href={isLocked ? "#" : link.href}
+                      onClick={(e) => isLocked && e.preventDefault()}
                       className={cn(
                         "flex items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors group",
                         isActive && !isLocked
@@ -277,13 +298,27 @@ export function Sidebar({ role, schoolName, isClassTeacher, effectiveTenantId = 
           <span>System Settings</span>
         </Link>
 
-        <a
-          href="mailto:support@edumanage.com"
+        <Link
+          href={
+            role === "SUPERADMIN" && effectiveTenantId === null
+              ? "/superadmin/help"
+              : role === "ADMIN" || role === "SUPERADMIN"
+              ? "/admin/help"
+              : role === "TEACHER" || String(role) === "TEACHER"
+              ? "/teacher/help"
+              : role === "STUDENT" || String(role) === "STUDENT"
+              ? "/student/help"
+              : role === "PARENT" || String(role) === "PARENT"
+              ? "/parent/help"
+              : role === "LIBRARIAN" || String(role) === "LIBRARIAN"
+              ? "/librarian/help"
+              : "/admin/help"
+          }
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
         >
           <HelpCircle className="h-4 w-4 text-slate-400" />
           <span>Help & Support</span>
-        </a>
+        </Link>
       </div>
     </div>
   )

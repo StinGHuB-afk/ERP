@@ -1,5 +1,6 @@
 import Link from "next/link"
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { Prisma } from "@prisma/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StudentForm } from "./student-form"
@@ -25,9 +26,13 @@ export default async function AdminStudentsPage(
   const classId = searchParams.classId || ""
   const pageSize = 10
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const whereCondition: Prisma.StudentWhereInput = {
     user: {
-      name: { contains: query }
+      name: { contains: query },
+      schoolId: tenantId
     }
   }
 
@@ -54,6 +59,7 @@ export default async function AdminStudentsPage(
     }),
     prisma.student.count({ where: whereCondition }),
     prisma.class.findMany({
+      where: { schoolId: tenantId },
       select: { id: true, name: true },
       orderBy: { name: 'asc' }
     })
@@ -128,6 +134,7 @@ export default async function AdminStudentsPage(
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead>Student Unique ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Class</TableHead>
@@ -137,13 +144,16 @@ export default async function AdminStudentsPage(
           <TableBody>
             {students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-slate-500">
+                <TableCell colSpan={5} className="text-center py-12 text-slate-500">
                   No students found matching your criteria.
                 </TableCell>
               </TableRow>
             ) : (
               (Array.isArray(students) ? students : []).map((student) => (
                 <TableRow key={student.id} className="hover:bg-slate-50/50">
+                  <TableCell className="font-mono text-xs font-semibold text-blue-700 bg-blue-50/50 rounded-md">
+                    {student.rollNumber ? `ROLL-${student.rollNumber}` : `STU-${student.id.slice(0, 8).toUpperCase()}`}
+                  </TableCell>
                   <TableCell className="font-medium text-slate-800">
                     <Link
                       href={`/admin/students/${student.id}`}

@@ -30,7 +30,27 @@ export async function getClassTeacherClassIds(teacherId: string, academicSession
     where: { teacherId, academicSessionId, isActive: true },
     select: { classId: true },
   })
-  return rows.map((r) => r.classId)
+  const classIds = rows.map((r) => r.classId)
+
+  const directClasses = await prisma.class.findMany({
+    where: { teacherId },
+    select: { id: true },
+  })
+  for (const c of directClasses) {
+    if (!classIds.includes(c.id)) classIds.push(c.id)
+  }
+
+  const subjectClasses = await prisma.subject.findMany({
+    where: { teacherId },
+    select: { classes: { select: { id: true } } },
+  })
+  for (const s of subjectClasses) {
+    for (const c of s.classes) {
+      if (!classIds.includes(c.id)) classIds.push(c.id)
+    }
+  }
+
+  return classIds
 }
 
 export async function getStudentsForClassTeacherRole(teacherId: string, academicSessionId: string) {
@@ -48,9 +68,21 @@ export async function assertClassTeacherOwnership(teacherId: string, classId: st
     where: { teacherId, classId, academicSessionId, isActive: true },
     select: { id: true },
   })
-  if (!assignment) {
-    throw new Error("Authorization denied: You are not the active class teacher for this class in the current session.")
-  }
+  if (assignment) return
+
+  const directClass = await prisma.class.findFirst({
+    where: { id: classId, teacherId },
+    select: { id: true },
+  })
+  if (directClass) return
+
+  const subjectClass = await prisma.subject.findFirst({
+    where: { teacherId, classes: { some: { id: classId } } },
+    select: { id: true },
+  })
+  if (subjectClass) return
+
+  throw new Error("Authorization denied: You are not the active class teacher for this class in the current session.")
 }
 
 export async function assertStudentInClassTeacherRoster(
@@ -86,7 +118,27 @@ export async function getSubjectTeacherClassIds(teacherId: string, academicSessi
     where: { teacherId, academicSessionId, isActive: true },
     select: { classId: true },
   })
-  return [...new Set(assignments.map((a) => a.classId))]
+  const classIds = assignments.map((a) => a.classId)
+
+  const directSubjects = await prisma.subject.findMany({
+    where: { teacherId },
+    select: { classes: { select: { id: true } } },
+  })
+  for (const s of directSubjects) {
+    for (const c of s.classes) {
+      if (!classIds.includes(c.id)) classIds.push(c.id)
+    }
+  }
+
+  const directClasses = await prisma.class.findMany({
+    where: { teacherId },
+    select: { id: true },
+  })
+  for (const c of directClasses) {
+    if (!classIds.includes(c.id)) classIds.push(c.id)
+  }
+
+  return [...new Set(classIds)]
 }
 
 export async function getStudentsForSubjectAssignment(teacherId: string, subjectId: string, academicSessionId: string) {
@@ -113,9 +165,21 @@ export async function assertTeachingAssignment(
     where: { teacherId, subjectId, classId, academicSessionId, isActive: true },
     select: { id: true },
   })
-  if (!assignment) {
-    throw new Error("Authorization denied: You do not have an active teaching assignment for this subject in this class.")
-  }
+  if (assignment) return
+
+  const directSubject = await prisma.subject.findFirst({
+    where: { id: subjectId, teacherId, ...(classId ? { classes: { some: { id: classId } } } : {}) },
+    select: { id: true },
+  })
+  if (directSubject) return
+
+  const directClass = await prisma.class.findFirst({
+    where: { id: classId, teacherId },
+    select: { id: true },
+  })
+  if (directClass) return
+
+  throw new Error("Authorization denied: You do not have an active teaching assignment for this subject in this class.")
 }
 
 export async function assertMarkEntryAuthorized(
@@ -134,11 +198,21 @@ export async function assertMarkEntryAuthorized(
     where: { teacherId, subjectId, classId: enrollment.classId, academicSessionId, isActive: true },
     select: { id: true },
   })
-  if (!assignment) {
-    throw new Error("Authorization denied: You do not have an active teaching assignment for this subject in this student's class.")
-  }
+  if (assignment) return { enrollmentId: enrollment.id, classId: enrollment.classId }
 
-  return { enrollmentId: enrollment.id, classId: enrollment.classId }
+  const directSubject = await prisma.subject.findFirst({
+    where: { id: subjectId, teacherId },
+    select: { id: true },
+  })
+  if (directSubject) return { enrollmentId: enrollment.id, classId: enrollment.classId }
+
+  const directClass = await prisma.class.findFirst({
+    where: { id: enrollment.classId, teacherId },
+    select: { id: true },
+  })
+  if (directClass) return { enrollmentId: enrollment.id, classId: enrollment.classId }
+
+  throw new Error("Authorization denied: You do not have an active teaching assignment for this subject in this student's class.")
 }
 
 export async function validateAttendanceRoster(
@@ -180,7 +254,13 @@ export async function assertTeacherCanManageContent(
     where: { teacherId, subjectId, academicSessionId, isActive: true, ...(classId ? { classId } : {}) },
     select: { id: true },
   })
-  if (!assignment) {
-    throw new Error("Authorization denied: You do not have a teaching assignment for this subject (or class) in the current session.")
-  }
+  if (assignment) return
+
+  const directSubject = await prisma.subject.findFirst({
+    where: { id: subjectId, teacherId, ...(classId ? { classes: { some: { id: classId } } } : {}) },
+    select: { id: true },
+  })
+  if (directSubject) return
+
+  throw new Error("Authorization denied: You do not have a teaching assignment for this subject (or class) in the current session.")
 }

@@ -22,7 +22,7 @@ export function AssignClassModal({
   teacherId: string
   teacherName: string
   assignedClassId: string | null
-  classes: { id: string, name: string }[]
+  classes: { id: string, name: string, teacherId?: string | null, teacherName?: string | null }[]
 }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -58,7 +58,7 @@ export function AssignClassModal({
         <DialogHeader>
           <DialogTitle>Assign Class Teacher</DialogTitle>
           <DialogDescription>
-            Select a class to assign to {teacherName}. This will automatically replace any existing assignment.
+            Select a class to assign to {teacherName} (Teacher ID: TCH-{teacherId.slice(0, 8).toUpperCase()}). This will automatically replace any existing assignment.
           </DialogDescription>
         </DialogHeader>
 
@@ -75,6 +75,22 @@ export function AssignClassModal({
               </option>
             ))}
           </select>
+
+          {(() => {
+            const selectedClassObj = classes.find(c => c.id === selectedClassId)
+            if (selectedClassObj && selectedClassObj.teacherId && selectedClassObj.teacherId !== teacherId) {
+              return (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-md p-3 flex items-start gap-2">
+                  <div className="mt-0.5">⚠️</div>
+                  <div>
+                    <strong>Warning:</strong> This class is already assigned to <strong>{selectedClassObj.teacherName}</strong>. 
+                    Assigning it to {teacherName} will remove {selectedClassObj.teacherName}'s access.
+                  </div>
+                </div>
+              )
+            }
+            return null
+          })()}
 
           <div className="flex justify-end gap-3 mt-4">
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={isPending}>

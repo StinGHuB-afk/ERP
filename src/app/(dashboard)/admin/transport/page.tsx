@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -20,9 +20,12 @@ export default async function AdminTransportPage() {
     return <LockedModuleTeaser moduleName="Transport & Fleet Management" />
   }
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const [pendingRequests, activeAssignments, recentProcessed] = await Promise.all([
     prisma.transportChangeRequest.findMany({
-      where: { status: "PENDING" },
+      where: { status: "PENDING", student: { user: { schoolId: tenantId } } },
       include: {
         student: {
           include: {
@@ -34,6 +37,7 @@ export default async function AdminTransportPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.transportAssignment.findMany({
+      where: { student: { user: { schoolId: tenantId } } },
       include: {
         student: {
           include: {
@@ -46,7 +50,7 @@ export default async function AdminTransportPage() {
       take: 50,
     }),
     prisma.transportChangeRequest.findMany({
-      where: { status: { in: ["APPROVED", "REJECTED"] } },
+      where: { status: { in: ["APPROVED", "REJECTED"] }, student: { user: { schoolId: tenantId } } },
       include: {
         student: {
           include: {

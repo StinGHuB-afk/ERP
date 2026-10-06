@@ -10,9 +10,11 @@ interface MobileNavProps {
   role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "LIBRARIAN"
   schoolName: string
   isClassTeacher?: boolean
+  effectiveTenantId?: string | null
+  enabledModules?: string[]
 }
 
-export function MobileNav({ role, schoolName, isClassTeacher }: MobileNavProps) {
+export function MobileNav({ role, schoolName, isClassTeacher, effectiveTenantId = null, enabledModules = [] }: MobileNavProps) {
   const [open, setOpen] = useState(false)
 
   if (!open) {
@@ -44,7 +46,7 @@ export function MobileNav({ role, schoolName, isClassTeacher }: MobileNavProps) 
           <X className="h-5 w-5" />
         </Button>
         <div className="flex-1 overflow-y-auto">
-          <Sidebar role={role} schoolName={schoolName} isClassTeacher={isClassTeacher} />
+          <Sidebar role={role} schoolName={schoolName} isClassTeacher={isClassTeacher} effectiveTenantId={effectiveTenantId} enabledModules={enabledModules} />
         </div>
       </div>
     </div>

@@ -84,13 +84,18 @@ export function TenantSwitcher({ currentRole, initialTenantId }: TenantSwitcherP
             <span className="truncate block max-w-[150px]">{selectedLabel}</span>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent className="w-[280px] bg-white text-slate-900 border border-slate-200 shadow-md">
+        <SelectContent className="w-[320px] bg-white text-slate-900 border border-slate-200 shadow-md">
           <SelectItem value="global" className="text-xs font-medium cursor-pointer">
-            <span className="truncate pr-6 block">Global Superadmin View</span>
+            <span className="truncate pr-6 block font-bold text-slate-800">Global Superadmin View</span>
           </SelectItem>
-          {schools.map((school) => (
-            <SelectItem key={school.id} value={school.id} className="text-xs font-medium cursor-pointer">
-              <span className="truncate pr-6 block">{school.name}</span>
+          {schools.map((school: any) => (
+            <SelectItem key={school.id} value={school.id} className="text-xs font-medium cursor-pointer py-1.5">
+              <div className="flex flex-col text-left">
+                <span className="font-bold text-slate-900">{school.name}</span>
+                <span className="text-[10px] text-slate-500 font-medium leading-tight">
+                  👥 {school.userCounts?.total ?? 0} Users (T: {school.userCounts?.teachers ?? 0} • S: {school.userCounts?.students ?? 0} • P: {school.userCounts?.parents ?? 0} • L: {school.userCounts?.librarians ?? 0} • A: {school.userCounts?.admins ?? 0})
+                </span>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>

@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
+import { getEnabledModulesList } from "@/app/actions/entitlements.actions"
 
 export const dynamic = "force-dynamic"
 
@@ -83,11 +84,7 @@ export default async function DashboardLayout({
 
   let enabledModules: string[] = []
   if (effectiveTenantId) {
-    const tenantModules = await prisma.tenantModule.findMany({
-      where: { schoolId: effectiveTenantId, isEnabled: true },
-      select: { moduleKey: true },
-    })
-    enabledModules = tenantModules.map(m => m.moduleKey)
+    enabledModules = await getEnabledModulesList(effectiveTenantId)
   }
 
   return (
@@ -109,6 +106,7 @@ export default async function DashboardLayout({
           isClassTeacher={isClassTeacher}
           unreadAlertsCount={unreadAlertsCount}
           effectiveTenantId={effectiveTenantId}
+          enabledModules={enabledModules}
         />
         {/* Content Area */}
         <main className="flex-1 p-6 lg:p-8 bg-slate-50">{children}</main>

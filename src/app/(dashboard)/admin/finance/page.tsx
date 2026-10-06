@@ -1,6 +1,6 @@
 import { getTransactions, getFeeStructures } from "@/app/actions/finance.actions"
 import { getClasses } from "@/app/actions/admin"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import prisma from "@/lib/prisma"
 import { CreateFeeDialog } from "./components/create-fee-dialog"
 import { RecordTransactionDialog } from "./components/record-transaction-dialog"
@@ -23,6 +23,7 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownLeft,
+  ShieldAlert,
 } from "lucide-react"
 import { getTenantModules } from "@/app/actions/entitlements.actions"
 import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
@@ -32,10 +33,29 @@ export const dynamic = "force-dynamic"
 export default async function AdminFinancePage() {
   const session = await verifySession()
 
+  if (session?.role === "SUPERADMIN") {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center max-w-xl mx-auto my-12 space-y-4 shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-900">Tenant Financial Privacy Protection</h2>
+          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+            School financial ledgers, fee transaction histories, and pricing templates are confidential tenant assets. Access is restricted exclusively to local School Administrators (<span className="font-semibold text-slate-700">ADMIN</span> role).
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const modules = await getTenantModules()
   if (!modules["FINANCE"]) {
     return <LockedModuleTeaser moduleName="Finance & Unified Ledger" />
   }
+
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
 
   const [transactions, feeStructures, classes] = await Promise.all([
     getTransactions(),
@@ -44,7 +64,7 @@ export default async function AdminFinancePage() {
   ])
 
   const tenantUsers = await prisma.user.findMany({
-    where: session?.schoolId ? { schoolId: session.schoolId } : {},
+    where: { schoolId: tenantId },
     select: {
       id: true,
       name: true,

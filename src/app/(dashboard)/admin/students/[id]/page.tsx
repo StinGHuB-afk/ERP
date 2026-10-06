@@ -167,7 +167,7 @@ export default async function Student360ProfilePage(
             <CardContent className="p-5 space-y-5 text-xs">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Homeroom Class</span>
+                  <span className="text-slate-400 font-semibold block uppercase text-[10px]">Assigned Class</span>
                   <span className="text-slate-900 font-bold text-sm">{student.class?.name || "Unassigned"}</span>
                 </div>
                 <div>

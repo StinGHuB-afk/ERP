@@ -17,7 +17,7 @@ export async function getTeacherDashboardData() {
   const teacher = await prisma.teacher.findUnique({
     where: { userId: session.userId },
     include: {
-      classes: true, // Classes where they are the homeroom teacher
+      classes: true, // Classes where they are the class teacher
       timetablePeriods: {
         where: { dayOfWeek: currentDay },
         include: {

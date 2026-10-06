@@ -23,6 +23,9 @@ export default async function AdminDashboard() {
   const [
     totalStudents,
     totalTeachers,
+    totalParents,
+    totalLibrarians,
+    totalAdmins,
     totalClasses,
     totalSubjects,
     publishedMarksCount,
@@ -33,6 +36,9 @@ export default async function AdminDashboard() {
   ] = await Promise.all([
     prisma.student.count(),
     prisma.teacher.count(),
+    prisma.parent.count(),
+    prisma.user.count({ where: { role: "LIBRARIAN" } }),
+    prisma.user.count({ where: { role: { in: ["ADMIN", "SUPERADMIN"] } } }),
     prisma.class.count(),
     prisma.subject.count(),
     prisma.mark.count({ where: { status: "PUBLISHED" } }),
@@ -48,6 +54,8 @@ export default async function AdminDashboard() {
     prisma.mark.findMany({ where: { status: "PUBLISHED" }, include: { subject: true } }),
     prisma.subject.findMany(),
   ])
+
+  const totalUsers = totalStudents + totalTeachers + totalParents + totalLibrarians + totalAdmins
 
   let totalScore = 0
   let totalMaxScore = 0
@@ -78,9 +86,34 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Overview of academic performance and administrative operations.</p>
+      {/* School Header & Detailed User Telemetry */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">School Admin Dashboard</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Overview of academic performance, student roster, and staff telemetry.</p>
+        </div>
+
+        {/* Detailed User Breakdown Badge Bar */}
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs">
+          <span className="font-bold text-slate-800 bg-blue-100 text-blue-900 px-2 py-1 rounded">
+            👥 {totalUsers} Total School Users
+          </span>
+          <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            Teachers: {totalTeachers}
+          </span>
+          <span className="font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+            Students: {totalStudents}
+          </span>
+          <span className="font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+            Parents: {totalParents}
+          </span>
+          <span className="font-semibold text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+            Librarians: {totalLibrarians}
+          </span>
+          <span className="font-semibold text-slate-700 bg-slate-200 px-2 py-0.5 rounded">
+            Admins: {totalAdmins}
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

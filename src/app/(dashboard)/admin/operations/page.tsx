@@ -1,10 +1,12 @@
 import { getLeaveRequests, getAssets } from "@/app/actions/operations.actions"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import prisma from "@/lib/prisma"
 import { ApplyLeaveDialog } from "./components/apply-leave-dialog"
 import { LeaveActionButtons } from "./components/leave-action-buttons"
 import { RegisterAssetDialog } from "./components/register-asset-dialog"
 import { ManageAssetDialog } from "./components/manage-asset-dialog"
+import { getTenantModules } from "@/app/actions/entitlements.actions"
+import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 import {
   Table,
   TableBody,
@@ -30,13 +32,21 @@ export const dynamic = "force-dynamic"
 export default async function AdminOperationsPage() {
   const session = await verifySession()
 
+  const modules = await getTenantModules()
+  if (!modules["ASSETS"]) {
+    return <LockedModuleTeaser moduleName="Operations & Asset Management" />
+  }
+
   const [leaveRequests, assets] = await Promise.all([
     getLeaveRequests(),
     getAssets(),
   ])
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const tenantUsers = await prisma.user.findMany({
-    where: session?.schoolId ? { schoolId: session.schoolId } : {},
+    where: { schoolId: tenantId },
     select: {
       id: true,
       name: true,

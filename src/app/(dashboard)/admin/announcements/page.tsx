@@ -1,11 +1,16 @@
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { Bell } from "lucide-react"
 import { AnnouncementForm } from "@/components/dashboard/announcement-form"
 import { DeleteAnnouncementButton } from "@/components/dashboard/delete-announcement"
 import { Badge } from "@/components/ui/badge"
 
 export default async function AdminAnnouncementsPage() {
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const announcements = await prisma.announcement.findMany({
+    where: { author: { schoolId: tenantId } },
     orderBy: { createdAt: 'desc' }
   })
 

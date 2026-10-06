@@ -10,6 +10,8 @@ import { BookOpen, Activity, AlertCircle, DollarSign, PlusCircle } from "lucide-
 import { upsertBook, borrowBook, returnBook } from "@/app/actions/library.actions"
 import { toast } from "sonner"
 
+import { LibrarianAlertModal } from "./LibrarianAlertModal"
+
 export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any) {
   const [activeTab, setActiveTab] = useState("catalog")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -66,6 +68,15 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
 
   return (
     <div className="space-y-6">
+      {/* Header & Alert Action Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Library & Circulation Desk</h1>
+          <p className="text-xs text-slate-500">Manage book inventory, circulation desk issues/returns, and dispatch automated due & fine alerts.</p>
+        </div>
+        <LibrarianAlertModal schoolId={schoolId} borrowRecords={borrowRecords} />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -187,7 +198,14 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
                     {borrowRecords.filter((r: any) => r.status === "BORROWED").map((r: any) => (
                       <tr key={r.id} className="border-t">
                         <td className="p-3 font-medium">{r.book.title}</td>
-                        <td className="p-3">{r.user?.name || r.user?.email}</td>
+                        <td className="p-3">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800">{r.user?.name || "User"}</span>
+                            <span className="text-xs text-slate-500 font-mono">
+                              {r.user?.email} • <span className="bg-slate-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">ID: {r.user?.id?.slice(0, 8).toUpperCase()} ({r.user?.role})</span>
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3">{new Date(r.dueDate).toLocaleDateString()}</td>
                         <td className="p-3">
                           <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">{r.status}</span>

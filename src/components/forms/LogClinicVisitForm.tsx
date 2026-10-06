@@ -108,7 +108,10 @@ export function LogClinicVisitForm({
                 Log Clinic Incident
               </DialogTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Recording medical visit for <span className="font-semibold text-slate-800">{studentName}</span>
+                Recording medical visit for <span className="font-semibold text-slate-800">{studentName}</span>{" "}
+                <span className="font-mono text-[11px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 ml-1">
+                  ID: STU-{studentId.slice(0, 8).toUpperCase()}
+                </span>
               </p>
             </div>
           </div>

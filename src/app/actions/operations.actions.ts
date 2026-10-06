@@ -1,9 +1,10 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { Role, LeaveType, LeaveStatus, AssetCategory, AssetStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 
 export interface CreateLeaveRequestInput {
   type: LeaveType
@@ -24,16 +25,14 @@ async function resolveTenantContext(overrideSchoolId?: string) {
   if (!session) {
     throw new Error("Unauthorized: Authentication required.")
   }
+  const effectiveTenantId = await getEffectiveTenantId()
+  const schoolId = overrideSchoolId || effectiveTenantId || null
 
-  if (session.role === Role.SUPERADMIN) {
-    return { session, schoolId: overrideSchoolId || session.schoolId || null }
-  }
-
-  if (!session.schoolId) {
+  if (session.role !== Role.SUPERADMIN && !schoolId) {
     throw new Error("Orphaned account: No school association found.")
   }
 
-  return { session, schoolId: session.schoolId }
+  return { session, schoolId }
 }
 
 // ============================================================
@@ -42,6 +41,7 @@ async function resolveTenantContext(overrideSchoolId?: string) {
 
 export async function createLeaveRequest(data: CreateLeaveRequestInput) {
   const { session, schoolId } = await resolveTenantContext()
+  await enforceModuleAccess("LEAVES")
 
   if (!schoolId) {
     throw new Error("School context required to submit a leave request.")
@@ -106,6 +106,7 @@ export async function getLeaveRequests(overrideSchoolId?: string) {
 
 export async function reviewLeaveRequest(id: string, status: "APPROVED" | "REJECTED") {
   const { session, schoolId } = await resolveTenantContext()
+  await enforceModuleAccess("LEAVES")
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }
@@ -147,6 +148,7 @@ export async function reviewLeaveRequest(id: string, status: "APPROVED" | "REJEC
 
 export async function createAsset(data: CreateAssetInput) {
   const { session, schoolId } = await resolveTenantContext(data.schoolId)
+  await enforceModuleAccess("ASSETS")
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }
@@ -194,6 +196,7 @@ export async function getAssets(overrideSchoolId?: string) {
 
 export async function assignAsset(assetId: string, targetUserId: string) {
   const { session, schoolId } = await resolveTenantContext()
+  await enforceModuleAccess("ASSETS")
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }
@@ -244,6 +247,7 @@ export async function updateAssetStatus(
   status: "AVAILABLE" | "MAINTENANCE" | "LOST"
 ) {
   const { session, schoolId } = await resolveTenantContext()
+  await enforceModuleAccess("ASSETS")
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     throw new Error("Unauthorized: Administrative privileges required.")
   }

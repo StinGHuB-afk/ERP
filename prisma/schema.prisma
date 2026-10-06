@@ -138,6 +138,20 @@ enum LeaveStatus {
   REJECTED
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 enum AssetCategory {
   BOOK
   LAPTOP
@@ -230,6 +244,8 @@ model User {
   salaryStructure            SalaryStructure?
   payslips                   Payslip[]
   borrowRecords              BorrowRecord[]
+  submittedTickets           SupportTicket[]          @relation("SubmittedTickets")
+  respondedTickets           SupportTicket[]          @relation("RespondedTickets")
 
   @@index([isArchived])
   @@index([schoolId])
@@ -1069,6 +1085,7 @@ model School {
   books            Book[]
   borrowRecords    BorrowRecord[]
   activeModules    TenantModule[]
+  supportTickets   SupportTicket[]
 }
 
 // ============================================================
@@ -1390,4 +1407,39 @@ model TenantModule {
 
   @@unique([schoolId, moduleKey]) // A school can only have one toggle record per module
   @@index([schoolId])
+}
+
+// ============================================================
+// HELP & SUPPORT TICKETING ENGINE
+// ============================================================
+
+model SupportTicket {
+  id            String         @id @default(cuid())
+  schoolId      String?        // Null if ticket is directed to Superadmin platform level
+  senderId      String         // User ID of person creating ticket
+  senderRole    Role           // Role of person creating ticket
+  targetRole    Role           // Intended recipient role (TEACHER, ADMIN, SUPERADMIN)
+  targetUserId  String?        // Specific user (e.g., specific teacher) if applicable
+
+  category      String         // Academic, Technical, Finance, Transport, Library, General, etc.
+  subject       String
+  message       String
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+
+  response      String?        // Response text
+  respondedAt   DateTime?
+  respondedById String?
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  school        School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sender        User           @relation("SubmittedTickets", fields: [senderId], references: [id], onDelete: Cascade)
+  respondedBy   User?          @relation("RespondedTickets", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([schoolId])
+  @@index([senderId])
+  @@index([targetRole])
+  @@index([status])
 }

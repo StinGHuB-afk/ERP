@@ -20,6 +20,7 @@ export function Header({
   isClassTeacher,
   unreadAlertsCount = 0,
   effectiveTenantId = null,
+  enabledModules = [],
 }: {
   userName: string | null
   role: Role | "SUPERADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "LIBRARIAN"
@@ -30,6 +31,7 @@ export function Header({
   isClassTeacher?: boolean
   unreadAlertsCount?: number
   effectiveTenantId?: string | null
+  enabledModules?: string[]
 }) {
   const handleLogout = async () => {
     await logout()
@@ -40,7 +42,7 @@ export function Header({
   return (
     <header className="flex h-14 items-center gap-4 border-b border-slate-200 bg-white px-5 lg:px-8 justify-between sticky top-0 z-40">
       <div className="flex flex-1 items-center gap-3">
-        <MobileNav role={role} schoolName={schoolName} isClassTeacher={isClassTeacher} />
+        <MobileNav role={role} schoolName={schoolName} isClassTeacher={isClassTeacher} effectiveTenantId={effectiveTenantId} enabledModules={enabledModules} />
         <h1 className="hidden sm:block text-sm font-semibold tracking-tight text-slate-900 capitalize">
           {role.toLowerCase()} Portal
         </h1>

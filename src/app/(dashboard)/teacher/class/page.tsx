@@ -136,7 +136,7 @@ export default async function ClassTeacherPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">My Class: {teacherClass.name}</h1>
-        <p className="text-sm text-slate-500">Overview and student management for your assigned homeroom class.</p>
+        <p className="text-sm text-slate-500">Overview and student management for your assigned class.</p>
       </div>
 
       {/* Summary Cards */}
@@ -204,7 +204,9 @@ export default async function ClassTeacherPage() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium text-slate-900">{student.user.name || "Unknown"}</span>
-                      <span className="text-xs text-slate-500">{student.user.email}</span>
+                      <span className="text-xs text-slate-500">
+                        {student.user.email} • <span className="font-mono text-[11px] font-semibold text-blue-700 bg-blue-50 px-1 py-0.5 rounded">ID: STU-{student.id.slice(0, 8).toUpperCase()}</span>
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>

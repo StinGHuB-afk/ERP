@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { Prisma } from "@prisma/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TeacherForm } from "./teacher-form"
@@ -11,6 +12,11 @@ import { CsvExportButton } from "@/components/dashboard/csv-export-button"
 import { exportAllTeachers } from "@/app/actions/export"
 import { ResetPasswordButton } from "@/components/dashboard/reset-password-button"
 
+import { TeacherCsvUploader } from "@/components/admin/teacher-csv-uploader"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Upload } from "lucide-react"
+
 export default async function AdminTeachersPage(
   props: { searchParams: Promise<{ q?: string, page?: string }> }
 ) {
@@ -19,13 +25,17 @@ export default async function AdminTeachersPage(
   const page = parseInt(searchParams.page || "1")
   const pageSize = 10
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const whereCondition: Prisma.TeacherWhereInput = {
     user: {
-      name: { contains: query }
+      name: { contains: query },
+      schoolId: tenantId
     }
   }
 
-    const [teachers, totalItems, classes] = await Promise.all([
+    const [teachers, totalItems, rawClasses] = await Promise.all([
       prisma.teacher.findMany({
         where: whereCondition,
         include: {
@@ -37,10 +47,27 @@ export default async function AdminTeachersPage(
         take: pageSize,
       }),
       prisma.teacher.count({ where: whereCondition }),
-      prisma.class.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } })
+      prisma.class.findMany({ 
+        where: { schoolId: tenantId }, 
+        select: { 
+          id: true, 
+          name: true,
+          teacherId: true,
+          teacher: { select: { user: { select: { name: true } } } }
+        }, 
+        orderBy: { name: 'asc' } 
+      })
     ])
 
+    const classes = rawClasses.map(c => ({
+      id: c.id,
+      name: c.name,
+      teacherId: c.teacherId,
+      teacherName: c.teacher?.user?.name || null
+    }))
+
   const exportData = (Array.isArray(teachers) ? teachers : []).map(teacher => ({
+    teacherId: `TCH-${teacher.id.slice(0, 8).toUpperCase()}`,
     name: teacher.user.name,
     email: teacher.user.email,
     assignedClass: teacher.classes && teacher.classes.length > 0 ? teacher.classes[0].name : "Not Assigned",
@@ -48,6 +75,7 @@ export default async function AdminTeachersPage(
   }))
 
   const exportColumns = [
+    { header: "Teacher Unique ID", key: "teacherId" },
     { header: "Name", key: "name" },
     { header: "Email", key: "email" },
     { header: "Assigned Class", key: "assignedClass" },
@@ -66,6 +94,27 @@ export default async function AdminTeachersPage(
             fetchAllAction={exportAllTeachers.bind(null) as any}
             label="Export All Teachers"
           />
+          <Dialog>
+            <DialogTrigger
+              suppressHydrationWarning
+              render={
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  suppressHydrationWarning
+                >
+                  <Upload className="h-4 w-4 text-slate-500" />
+                  Upload CSV
+                </Button>
+              }
+            />
+            <DialogContent className="max-w-3xl p-6 bg-white rounded-xl">
+              <DialogHeader>
+                <DialogTitle className="sr-only">CSV Teacher Onboarding</DialogTitle>
+              </DialogHeader>
+              <TeacherCsvUploader />
+            </DialogContent>
+          </Dialog>
           <TeacherForm />
         </div>
       </div>
@@ -78,6 +127,7 @@ export default async function AdminTeachersPage(
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
+              <TableHead>Teacher Unique ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Class Teacher</TableHead>
@@ -87,13 +137,16 @@ export default async function AdminTeachersPage(
           <TableBody>
             {teachers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-12 text-slate-500">
+                <TableCell colSpan={5} className="text-center py-12 text-slate-500">
                   No teachers found matching your criteria.
                 </TableCell>
               </TableRow>
             ) : (
               (Array.isArray(teachers) ? teachers : []).map((teacher) => (
                 <TableRow key={teacher.id} className="hover:bg-slate-50/50">
+                  <TableCell className="font-mono text-xs font-semibold text-blue-700 bg-blue-50/50 rounded-md">
+                    TCH-{teacher.id.slice(0, 8).toUpperCase()}
+                  </TableCell>
                   <TableCell className="font-medium text-slate-800">{teacher.user.name || "Unknown Teacher"}</TableCell>
                   <TableCell className="text-slate-600">{teacher.user.email}</TableCell>
                   <TableCell>

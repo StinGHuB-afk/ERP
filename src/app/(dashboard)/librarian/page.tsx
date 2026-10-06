@@ -20,6 +20,9 @@ export default async function LibrarianDashboardPage() {
 
   const modules = await getTenantModules()
   if (!modules["LIBRARY"]) {
+    if (!["ADMIN", "SUPERADMIN"].includes(session.role)) {
+      redirect("/")
+    }
     return <LockedModuleTeaser moduleName="Library & Circulation Management" />
   }
 

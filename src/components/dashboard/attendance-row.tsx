@@ -133,7 +133,10 @@ export function AttendanceRow({
   return (
     <TableRow className={`transition-all duration-200 ${isPending ? "opacity-85" : ""}`}>
       <TableCell className="font-medium text-slate-900">
-        {student.user.name || "Unknown Student"}
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-900">{student.user.name || "Unknown Student"}</span>
+          <span className="text-[11px] font-mono text-slate-400">ID: STU-{student.id.slice(0, 8).toUpperCase()}</span>
+        </div>
       </TableCell>
 
       <TableCell>

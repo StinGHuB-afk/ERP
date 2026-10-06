@@ -2,6 +2,7 @@ import { getAdmissionEnquiries } from "@/app/actions/admission.actions"
 import { ManageApplicationDialog } from "./components/manage-application-dialog"
 import { CreateApplicationDialog } from "./components/create-application-dialog"
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { getTenantModules } from "@/app/actions/entitlements.actions"
 import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 import { Button } from "@/components/ui/button"
@@ -73,10 +74,12 @@ export default async function AdminAdmissionsPage() {
     )
   }
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const enquiries = await getAdmissionEnquiries()
-  const classes = await prisma.class.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
-  const school = await prisma.school.findFirst({ select: { id: true } })
-  const schoolId = school?.id || ""
+  const classes = await prisma.class.findMany({ where: { schoolId: tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+  const schoolId = tenantId
 
   const totalCount = enquiries.length
   const pendingCount = enquiries.filter((e) => e.status === "PENDING").length

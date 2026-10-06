@@ -27,7 +27,8 @@ export async function exportAllStudents(classId?: string) {
     orderBy: { user: { name: "asc" } },
   })
 
-  return students.map(s => ({
+  return students.map((s) => ({
+    studentId: sanitizeCsvValue(s.rollNumber ? s.rollNumber : `STU-${s.id.slice(0, 8).toUpperCase()}`),
     name: sanitizeCsvValue(s.user.name ?? ""),
     email: sanitizeCsvValue(s.user.email),
     rollNumber: sanitizeCsvValue(s.rollNumber ?? ""),
@@ -51,7 +52,8 @@ export async function exportAllTeachers() {
     orderBy: { user: { name: "asc" } },
   })
 
-  return teachers.map(t => ({
+  return teachers.map((t) => ({
+    teacherId: sanitizeCsvValue(`TCH-${t.id.slice(0, 8).toUpperCase()}`),
     name: sanitizeCsvValue(t.user.name ?? ""),
     email: sanitizeCsvValue(t.user.email),
     assignedClass: sanitizeCsvValue(
@@ -75,8 +77,9 @@ export async function exportAllClasses() {
     orderBy: { name: "asc" },
   })
 
-  return classes.map(c => ({
+  return classes.map((c) => ({
     name: sanitizeCsvValue(c.name),
+    teacherId: sanitizeCsvValue(c.teacher ? `TCH-${c.teacher.id.slice(0, 8).toUpperCase()}` : "N/A"),
     teacher: sanitizeCsvValue(c.teacher?.user.name ?? "Unassigned"),
     studentCount: String(c.students.length),
   }))
@@ -90,7 +93,6 @@ export async function exportAllClasses() {
  *   to prevent CSV injection in spreadsheet applications
  */
 function sanitizeCsvValue(val: string): string {
-  // Prevent formula injection
   if (val.startsWith("=") || val.startsWith("+") || val.startsWith("-") || val.startsWith("@")) {
     val = "'" + val
   }

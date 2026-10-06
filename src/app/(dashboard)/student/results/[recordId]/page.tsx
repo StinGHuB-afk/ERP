@@ -156,7 +156,7 @@ export default async function ReportCardPage({ params }: { params: Promise<{ rec
                 <span className="text-lg font-bold text-slate-800">{record.student.rollNumber || "N/A"}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Class / Homeroom</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Class</span>
                 <span className="text-lg font-bold text-slate-800">{record.enrollment?.class?.name || record.student.class?.name || "Unassigned"}</span>
               </div>
               <div className="flex flex-col">

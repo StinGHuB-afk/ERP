@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClass } from "@/app/actions/admin"
 
-export function ClassForm({ teachers }: { teachers: { id: string, name: string | null }[] }) {
+export function ClassForm({ teachers }: { teachers: { id: string, name: string | null, assignedClass?: string | null }[] }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState("")
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("none")
   const router = useRouter()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,8 +51,8 @@ export function ClassForm({ teachers }: { teachers: { id: string, name: string |
             <Input id="name" name="name" required placeholder="e.g. Grade 10 - A" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="teacherId">Homeroom Teacher</Label>
-            <Select name="teacherId" defaultValue="none">
+            <Label htmlFor="teacherId">Class Teacher</Label>
+            <Select name="teacherId" value={selectedTeacherId} onValueChange={(v) => setSelectedTeacherId(v ?? "none")}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a teacher" />
               </SelectTrigger>
@@ -62,6 +63,24 @@ export function ClassForm({ teachers }: { teachers: { id: string, name: string |
                 ))}
               </SelectContent>
             </Select>
+
+            {(() => {
+              if (selectedTeacherId !== "none") {
+                const teacherObj = teachers.find(t => t.id === selectedTeacherId)
+                if (teacherObj && teacherObj.assignedClass) {
+                  return (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-md p-2 mt-2 flex items-start gap-1.5">
+                      <div>⚠️</div>
+                      <div>
+                        <strong>Warning:</strong> This teacher is currently assigned to <strong>{teacherObj.assignedClass}</strong>. 
+                        They will be removed from their old class if you proceed.
+                      </div>
+                    </div>
+                  )
+                }
+              }
+              return null
+            })()}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={isPending} className="w-full">

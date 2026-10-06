@@ -227,3 +227,116 @@ export async function bulkUploadStudents(data: StudentUploadRecord[]) {
     return { error: "Failed to execute bulk student onboarding." }
   }
 }
+
+export interface TeacherUploadRecord {
+  name: string
+  email: string
+  teacherId?: string | null
+  specialization?: string | null
+  qualification?: string | null
+  password?: string | null
+}
+
+export async function bulkUploadTeachers(data: TeacherUploadRecord[]) {
+  if (!data || data.length === 0) {
+    return { error: "No teacher records provided." }
+  }
+
+  try {
+    const { verifySession, getEffectiveTenantId } = await import("@/lib/auth/session")
+    const session = await verifySession()
+    if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+      return { error: "Unauthorized access." }
+    }
+
+    const effectiveTenantId = await getEffectiveTenantId()
+    const schoolId = session.role === Role.SUPERADMIN ? (effectiveTenantId || null) : (session.schoolId || effectiveTenantId || null)
+
+    if (!schoolId && session.role !== Role.SUPERADMIN) {
+      return { error: "No active school context found." }
+    }
+
+    // 1. Sanitize & deduplicate input rows
+    const sanitized = data.filter((r) => r.email && r.name && r.email.trim().length > 0 && r.name.trim().length > 0)
+    if (sanitized.length === 0) {
+      return { error: "CSV contains no valid teacher rows with email and name." }
+    }
+
+    const emails = [...new Set(sanitized.map((v) => v.email.toLowerCase().trim()))]
+    const existingUsers = await prisma.user.findMany({
+      where: { email: { in: emails } },
+      select: { email: true },
+    })
+    const existingEmailSet = new Set(existingUsers.map((u) => u.email))
+
+    const seenInBatch = new Set<string>()
+    const newRecords = sanitized.filter((r) => {
+      const email = r.email.toLowerCase().trim()
+      if (existingEmailSet.has(email) || seenInBatch.has(email)) return false
+      seenInBatch.add(email)
+      return true
+    })
+
+    if (newRecords.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        totalProcessed: sanitized.length,
+        message: "All teachers in the CSV already exist in the database.",
+      }
+    }
+
+    const defaultPasswordHash = await hashPassword("Teacher@123")
+
+    // Create Users & Teachers
+    const newUserData = await Promise.all(
+      newRecords.map(async (r) => {
+        const pwdHash = r.password && r.password.trim().length > 0 ? await hashPassword(r.password.trim()) : defaultPasswordHash
+        return {
+          email: r.email.toLowerCase().trim(),
+          name: r.name.trim(),
+          password: pwdHash,
+          role: Role.TEACHER,
+          mustChangePassword: true,
+          schoolId: schoolId,
+        }
+      })
+    )
+
+    await prisma.user.createMany({
+      data: newUserData,
+    })
+
+    const createdUsers = await prisma.user.findMany({
+      where: { email: { in: newRecords.map((r) => r.email.toLowerCase().trim()) } },
+      select: { id: true, email: true },
+    })
+    const emailToUserIdMap = new Map(createdUsers.map((u) => [u.email, u.id]))
+
+    // Create Teacher profile records
+    const teacherData = newRecords.map((r) => {
+      const userId = emailToUserIdMap.get(r.email.toLowerCase().trim())!
+      return {
+        userId,
+        specialization: r.specialization ? r.specialization.trim() : null,
+        qualification: r.qualification ? r.qualification.trim() : null,
+      }
+    })
+
+    await prisma.teacher.createMany({
+      data: teacherData,
+    })
+
+    revalidatePath("/admin/teachers")
+    revalidatePath("/admin/classes")
+
+    return {
+      success: true,
+      count: newRecords.length,
+      totalProcessed: sanitized.length,
+    }
+  } catch (error) {
+    console.error("Error in bulkUploadTeachers:", error)
+    return { error: "Failed to execute bulk teacher onboarding." }
+  }
+}

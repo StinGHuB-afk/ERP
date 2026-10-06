@@ -5,7 +5,7 @@ import { headers } from "next/headers"
 import prisma from "@/lib/prisma"
 import { createSession, deleteSession } from "@/lib/auth/session"
 import { verifyPassword, silentRehashUserPassword } from "@/lib/auth/password-crypto"
-import { checkIpRateLimit, delay } from "@/lib/auth/rate-limiter"
+import { checkIpRateLimit, delay, getAccountLockoutStatus, recordFailedLogin, clearFailedLoginAttempts } from "@/lib/auth/rate-limiter"
 import { loginSchema } from "@/lib/validations"
 import { Role } from "@prisma/client"
 
@@ -29,10 +29,18 @@ export async function login(formData: FormData) {
 
   const { email, password } = parsed.data
 
+  // 2.5 In-Memory Lockout Check (Pre-DB)
+  const lockoutStatus = await getAccountLockoutStatus(email)
+  if (lockoutStatus.isLocked) {
+    const minutesLeft = Math.max(1, Math.ceil(lockoutStatus.remainingLockoutMs / 60000))
+    return { error: `Account is locked due to multiple failed attempts. Try again in ${minutesLeft} minute(s).` }
+  }
+
   // 3. User Resolution
   const user = await prisma.user.findUnique({ where: { email } })
   if (!user) {
-    await delay(300)
+    const { progressiveDelayMs } = await recordFailedLogin(email)
+    await delay(progressiveDelayMs || 300)
     return { error: "Invalid email or password." }
   }
 
@@ -50,6 +58,8 @@ export async function login(formData: FormData) {
     const newAttempts = (user.failedLoginAttempts || 0) + 1
     const isLocking = newAttempts >= 5
 
+    const { progressiveDelayMs } = await recordFailedLogin(email)
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -58,7 +68,7 @@ export async function login(formData: FormData) {
       },
     })
 
-    await delay(300)
+    await delay(progressiveDelayMs)
     return {
       error: isLocking
         ? "Account is now locked for 15 minutes due to 5 failed login attempts."
@@ -67,6 +77,7 @@ export async function login(formData: FormData) {
   }
 
   // 7. Reset Lockout & Counters on Auth Success
+  await clearFailedLoginAttempts(email)
   if (user.failedLoginAttempts > 0 || user.lockedUntil) {
     await prisma.user.update({
       where: { id: user.id },

@@ -12,12 +12,40 @@ export async function getTenantList() {
     return []
   }
 
-  return prisma.school.findMany({
-    select: {
-      id: true,
-      name: true,
-    },
-    orderBy: { name: "asc" },
+  const [schools, userRoleGroup] = await Promise.all([
+    prisma.school.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.groupBy({
+      by: ["schoolId", "role"],
+      _count: { id: true },
+    }),
+  ])
+
+  return schools.map((school) => {
+    const schoolUsers = userRoleGroup.filter((u) => u.schoolId === school.id)
+    const teachers = schoolUsers.find((u) => u.role === Role.TEACHER)?._count.id || 0
+    const students = schoolUsers.find((u) => u.role === Role.STUDENT)?._count.id || 0
+    const parents = schoolUsers.find((u) => u.role === Role.PARENT)?._count.id || 0
+    const librarians = schoolUsers.find((u) => u.role === Role.LIBRARIAN)?._count.id || 0
+    const admins = schoolUsers.filter((u) => u.role === Role.ADMIN || u.role === Role.SUPERADMIN).reduce((sum, u) => sum + u._count.id, 0)
+    const total = teachers + students + parents + librarians + admins
+
+    return {
+      ...school,
+      userCounts: {
+        total,
+        teachers,
+        students,
+        parents,
+        librarians,
+        admins,
+      },
+    }
   })
 }
 
@@ -79,17 +107,45 @@ export async function getSchools() {
     throw new Error("Unauthorized: SuperAdmin access required.")
   }
 
-  return prisma.school.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: {
-          users: true,
-          classes: true,
-          academicSessions: true,
+  const [schools, userRoleGroup] = await Promise.all([
+    prisma.school.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: {
+            users: true,
+            classes: true,
+            academicSessions: true,
+          },
         },
       },
-    },
+    }),
+    prisma.user.groupBy({
+      by: ["schoolId", "role"],
+      _count: { id: true },
+    }),
+  ])
+
+  return schools.map((school) => {
+    const schoolUsers = userRoleGroup.filter((u) => u.schoolId === school.id)
+    const teachers = schoolUsers.find((u) => u.role === Role.TEACHER)?._count.id || 0
+    const students = schoolUsers.find((u) => u.role === Role.STUDENT)?._count.id || 0
+    const parents = schoolUsers.find((u) => u.role === Role.PARENT)?._count.id || 0
+    const librarians = schoolUsers.find((u) => u.role === Role.LIBRARIAN)?._count.id || 0
+    const admins = schoolUsers.filter((u) => u.role === Role.ADMIN || u.role === Role.SUPERADMIN).reduce((sum, u) => sum + u._count.id, 0)
+    const total = school._count?.users || (teachers + students + parents + librarians + admins)
+
+    return {
+      ...school,
+      userCounts: {
+        total,
+        teachers,
+        students,
+        parents,
+        librarians,
+        admins,
+      },
+    }
   })
 }
 

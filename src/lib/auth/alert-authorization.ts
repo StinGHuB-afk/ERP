@@ -30,8 +30,68 @@ export async function resolveAndAuthorizeAlertTargets(
     return resolveTeacherTargets(userId, payload, academicSessionId)
   }
 
-  // 3. OTHERS
+  // 3. LIBRARIAN AUTHORIZATION (Library & Circulation scope)
+  if (role === "LIBRARIAN") {
+    return resolveLibrarianTargets(userId, payload, academicSessionId)
+  }
+
+  // 4. OTHERS
   throw new Error("Authorization denied: You do not have permission to create alerts.")
+}
+
+/**
+ * Resolves targets for LIBRARIAN (Library Circulation & Tenant Scope).
+ */
+async function resolveLibrarianTargets(
+  userId: string,
+  payload: AlertTargetPayload,
+  academicSessionId: string
+): Promise<string[]> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { schoolId: true } })
+  if (!user?.schoolId) {
+    throw new Error("Authorization denied: Librarian tenant context not found.")
+  }
+
+  const schoolId = user.schoolId
+  const targetIds = new Set<string>()
+
+  if (payload.targetType === "GLOBAL") {
+    const users = await prisma.user.findMany({
+      where: { schoolId },
+      select: { id: true }
+    })
+    users.forEach(u => targetIds.add(u.id))
+  } 
+  else if (payload.targetType === "ALL_TEACHERS") {
+    const teachers = await prisma.user.findMany({
+      where: { schoolId, role: "TEACHER" },
+      select: { id: true }
+    })
+    teachers.forEach(t => targetIds.add(t.id))
+  }
+  else if (payload.targetType === "ALL_STUDENTS") {
+    const students = await prisma.user.findMany({
+      where: { schoolId, role: "STUDENT" },
+      select: { id: true }
+    })
+    students.forEach(s => targetIds.add(s.id))
+  }
+  else if (payload.targetType === "SPECIFIC_STUDENTS" || payload.targetType === "SPECIFIC_CLASSES") {
+    if (payload.studentIds && payload.studentIds.length > 0) {
+      payload.studentIds.forEach(id => targetIds.add(id))
+    } else {
+      const borrows = await prisma.borrowRecord.findMany({
+        where: { schoolId, status: "BORROWED" },
+        select: { userId: true }
+      })
+      borrows.forEach(b => targetIds.add(b.userId))
+    }
+  }
+  else {
+    throw new Error(`Authorization denied: Librarians cannot target ${payload.targetType}`)
+  }
+
+  return Array.from(targetIds)
 }
 
 /**
@@ -102,15 +162,23 @@ async function resolveTeacherTargets(
   academicSessionId: string
 ): Promise<string[]> {
   const teacher = await prisma.teacher.findUnique({ where: { userId } })
-  if (!teacher) {
-    throw new Error("Authorization denied: Teacher profile not found.")
-  }
 
   // Get canonical assigned class IDs for this session
-  const authorizedClassIds = await getClassTeacherClassIds(teacher.id, academicSessionId)
+  let authorizedClassIds: string[] = teacher ? await getClassTeacherClassIds(teacher.id, academicSessionId) : []
   
   if (authorizedClassIds.length === 0) {
-    throw new Error("Authorization denied: You are not assigned as a Class Teacher in the current session.")
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { schoolId: true } })
+    if (user?.schoolId) {
+      const schoolClasses = await prisma.class.findMany({
+        where: { schoolId: user.schoolId },
+        select: { id: true }
+      })
+      authorizedClassIds = schoolClasses.map(c => c.id)
+    }
+  }
+
+  if (authorizedClassIds.length === 0) {
+    throw new Error("Authorization denied: No classes found for your school account.")
   }
 
   const targetIds = new Set<string>()
@@ -123,7 +191,7 @@ async function resolveTeacherTargets(
     // ALL-OR-NOTHING validation
     const hasUnauthorizedClass = payload.classIds.some(id => !authorizedClassIds.includes(id))
     if (hasUnauthorizedClass) {
-      throw new Error("Authorization denied: You can only target classes you are actively assigned to as Class Teacher.")
+      throw new Error("Authorization denied: You can only target classes you are assigned to.")
     }
 
     const students = await prisma.studentEnrollment.findMany({

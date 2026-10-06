@@ -6,23 +6,21 @@ import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
 import { studentSchema, teacherSchema, classSchema, subjectSchema } from "@/lib/validations"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 
 async function resolveTenantContext(overrideSchoolId?: string) {
   const session = await verifySession()
   if (!session) {
     throw new Error("Unauthorized")
   }
+  const effectiveTenantId = await getEffectiveTenantId()
+  const schoolId = overrideSchoolId || effectiveTenantId || null
 
-  if (session.role === Role.SUPERADMIN) {
-    return { session, schoolId: overrideSchoolId || null }
-  }
-
-  if (!session.schoolId) {
+  if (session.role !== Role.SUPERADMIN && !schoolId) {
     throw new Error("Orphaned account: No school association found.")
   }
 
-  return { session, schoolId: session.schoolId }
+  return { session, schoolId }
 }
 
 async function checkAdmin() {
@@ -74,23 +72,19 @@ export async function getStudents(schoolId?: string) {
 }
 
 export async function createStudent(formData: FormData) {
-  const session = await verifySession()
-  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+  const { session, schoolId } = await resolveTenantContext(formData.get("schoolId") as string || undefined)
+  if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     return { error: "Unauthorized" }
   }
-
-  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
-    return { error: "Orphaned account: No school association found." }
-  }
-
-  const schoolId = session.role === Role.SUPERADMIN
-    ? (formData.get("schoolId") as string) || session.schoolId || null
-    : session.schoolId
 
   const parsed = studentSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   try {
+    if (parsed.data.classId) {
+      const cls = await prisma.class.findUnique({ where: { id: parsed.data.classId } })
+      if (!cls || cls.schoolId !== schoolId) return { error: "Invalid class assignment" }
+    }
     const existingStudent = await prisma.user.findFirst({
       where: {
         role: Role.STUDENT,
@@ -133,18 +127,10 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function createTeacher(formData: FormData) {
-  const session = await verifySession()
-  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+  const { session, schoolId } = await resolveTenantContext(formData.get("schoolId") as string || undefined)
+  if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     return { error: "Unauthorized" }
   }
-
-  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
-    return { error: "Orphaned account: No school association found." }
-  }
-
-  const schoolId = session.role === Role.SUPERADMIN
-    ? (formData.get("schoolId") as string) || session.schoolId || null
-    : session.schoolId
 
   const parsed = teacherSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -172,33 +158,53 @@ export async function createTeacher(formData: FormData) {
 }
 
 export async function createClass(formData: FormData) {
-  const session = await verifySession()
-  if (!session || (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN)) {
+  const { session, schoolId } = await resolveTenantContext(formData.get("schoolId") as string || undefined)
+  if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) {
     return { error: "Unauthorized" }
   }
-
-  if (session.role !== Role.SUPERADMIN && !session.schoolId) {
-    return { error: "Orphaned account: No school association found." }
-  }
-
-  const schoolId = session.role === Role.SUPERADMIN
-    ? (formData.get("schoolId") as string) || session.schoolId || null
-    : session.schoolId
 
   const parsed = classSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   try {
-    await prisma.class.create({
-      data: {
-        name: parsed.data.name,
-        teacherId: parsed.data.teacherId || null,
-        schoolId,
-      },
+    if (parsed.data.teacherId) {
+      const t = await prisma.teacher.findUnique({ where: { id: parsed.data.teacherId }, include: { user: true } })
+      if (!t || t.user.schoolId !== schoolId) return { error: "Invalid teacher assignment" }
+    }
+
+    const activeSessionId = await getActiveSessionId()
+
+    await prisma.$transaction(async (tx) => {
+      const newClass = await tx.class.create({
+        data: {
+          name: parsed.data.name,
+          teacherId: parsed.data.teacherId || null,
+          schoolId,
+        },
+      })
+
+      if (parsed.data.teacherId && activeSessionId) {
+        await tx.classTeacherAssignment.updateMany({
+          where: { teacherId: parsed.data.teacherId, academicSessionId: activeSessionId, isActive: true },
+          data: { isActive: false, endedAt: new Date() }
+        })
+
+        await tx.class.updateMany({
+          where: { teacherId: parsed.data.teacherId, id: { not: newClass.id } },
+          data: { teacherId: null }
+        })
+
+        await tx.classTeacherAssignment.create({
+          data: { teacherId: parsed.data.teacherId, classId: newClass.id, academicSessionId: activeSessionId, isActive: true }
+        })
+      }
     })
+
     revalidatePath("/admin/classes")
+    revalidatePath("/admin/teachers")
     return { success: true }
-  } catch {
+  } catch (error) {
+    console.error(error)
     return { error: "Failed to create class. Name might already exist." }
   }
 }
@@ -224,8 +230,17 @@ export async function createSubject(formData: FormData) {
 }
 
 async function deleteEntity(model: "user" | "class" | "subject", id: string, path: string) {
-  if (!(await checkAdmin())) return { error: "Unauthorized" }
+  const { session, schoolId } = await resolveTenantContext()
+  if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) return { error: "Unauthorized" }
   try {
+    const item = await (prisma[model] as any).findUnique({ where: { id } })
+    if (!item) return { error: "Not found" }
+    
+    if (session.role !== Role.SUPERADMIN) {
+      if (model === "user" && item.schoolId !== schoolId) return { error: "Unauthorized" }
+      if (model === "class" && item.schoolId !== schoolId) return { error: "Unauthorized" }
+    }
+
     await (prisma[model] as any).delete({ where: { id } })
     revalidatePath(path)
     return { success: true }
@@ -251,11 +266,22 @@ export async function deleteSubject(id: string) {
 }
 
 export async function assignClassTeacher(teacherId: string, classId: string) {
-  if (!(await checkAdmin())) return { error: "Unauthorized" }
+  const { session, schoolId } = await resolveTenantContext()
+  if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) return { error: "Unauthorized" }
+
   const activeSessionId = await getActiveSessionId()
   if (!activeSessionId) return { error: "No active academic session." }
 
   try {
+    const t = await prisma.teacher.findUnique({ where: { id: teacherId }, include: { user: true } })
+    const c = await prisma.class.findUnique({ where: { id: classId } })
+
+    if (session.role !== Role.SUPERADMIN) {
+      if (!t || t.user.schoolId !== schoolId || !c || c.schoolId !== schoolId) {
+        return { error: "Unauthorized: Resource belongs to another school" }
+      }
+    }
+
     await prisma.$transaction([
       prisma.classTeacherAssignment.updateMany({
         where: { OR: [{ classId }, { teacherId }], academicSessionId: activeSessionId, isActive: true },
@@ -269,9 +295,11 @@ export async function assignClassTeacher(teacherId: string, classId: string) {
     ])
 
     revalidatePath("/admin/teachers")
+    revalidatePath("/admin/classes")
     revalidatePath("/teacher/class", "layout")
     return { success: true }
-  } catch {
+  } catch (err) {
+    console.error(err)
     return { error: "Failed to assign class teacher." }
   }
 }

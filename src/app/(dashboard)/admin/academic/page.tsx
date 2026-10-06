@@ -1,5 +1,5 @@
 import { getTimetable, getAssignments } from "@/app/actions/academic.actions"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import prisma from "@/lib/prisma"
 import { ScheduleClassDialog } from "./components/schedule-class-dialog"
 import { CreateAssignmentDialog } from "./components/create-assignment-dialog"
@@ -31,12 +31,14 @@ function formatDayOfWeek(day: string): string {
 
 export default async function AdminAcademicPage() {
   const session = await verifySession()
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
 
   const [timetablePeriods, assignments, classes, subjects, teachers] = await Promise.all([
     getTimetable(),
     getAssignments(),
     prisma.class.findMany({
-      where: session?.schoolId ? { schoolId: session.schoolId } : {},
+      where: { schoolId: tenantId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -45,7 +47,7 @@ export default async function AdminAcademicPage() {
       orderBy: { name: "asc" },
     }),
     prisma.teacher.findMany({
-      where: session?.schoolId ? { user: { schoolId: session.schoolId } } : {},
+      where: { user: { schoolId: tenantId } },
       select: {
         id: true,
         user: { select: { name: true, email: true } },

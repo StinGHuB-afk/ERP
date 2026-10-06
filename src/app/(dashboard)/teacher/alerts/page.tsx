@@ -4,7 +4,7 @@ import { AlertInboxList } from "@/components/dashboard/alert-inbox-list"
 import { CreateAlertForm } from "@/components/dashboard/create-alert-form"
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
-import { requireActiveSessionId } from "@/lib/auth/teacher-authorization"
+import { getClassTeacherClassIds, requireActiveSessionId } from "@/lib/auth/teacher-authorization"
 import { Badge } from "@/components/ui/badge"
 
 export const dynamic = "force-dynamic"
@@ -25,11 +25,34 @@ export default async function TeacherAlertsPage() {
   
   let assignedClasses: { id: string, name: string }[] = []
   if (teacher && academicSessionId) {
-    const assignments = await prisma.classTeacherAssignment.findMany({
-      where: { teacherId: teacher.id, academicSessionId, isActive: true },
-      include: { class: true }
-    })
-    assignedClasses = assignments.map(a => ({ id: a.class.id, name: a.class.name }))
+    const classIds = await getClassTeacherClassIds(teacher.id, academicSessionId)
+    if (classIds.length > 0) {
+      const classes = await prisma.class.findMany({
+        where: { id: { in: classIds } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" }
+      })
+      assignedClasses = classes
+    }
+  }
+
+  if (assignedClasses.length === 0) {
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { schoolId: true } })
+    if (user?.schoolId) {
+      const schoolClasses = await prisma.class.findMany({
+        where: { schoolId: user.schoolId },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" }
+      })
+      assignedClasses = schoolClasses
+    } else {
+      const anyClasses = await prisma.class.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+        take: 10
+      })
+      assignedClasses = anyClasses
+    }
   }
 
   const activeAlerts = await getMyAlerts("ACTIVE")
@@ -52,9 +75,7 @@ export default async function TeacherAlertsPage() {
             <p className="text-slate-500 text-sm">View your inbox and manage alerts for your assigned classes.</p>
           </div>
         </div>
-        {assignedClasses.length > 0 && (
-          <CreateAlertForm isAdmin={false} assignedClasses={assignedClasses} />
-        )}
+        <CreateAlertForm isAdmin={false} assignedClasses={assignedClasses} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

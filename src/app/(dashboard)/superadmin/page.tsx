@@ -119,8 +119,30 @@ export default async function SuperAdminSchoolsPage() {
                         {school.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-slate-900">{school.name}</div>
+                        <div className="font-bold text-slate-900 text-sm">{school.name}</div>
                         <div className="text-[11px] text-slate-400 font-mono">ID: {school.id}</div>
+
+                        {/* Detailed Role Breakdown Chips */}
+                        <div className="flex flex-wrap items-center gap-1 mt-1.5 max-w-md">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-900">
+                            👥 {school.userCounts?.total ?? 0} Total Users
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Teachers: {school.userCounts?.teachers ?? 0}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Students: {school.userCounts?.students ?? 0}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            Parents: {school.userCounts?.parents ?? 0}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                            Librarians: {school.userCounts?.librarians ?? 0}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            Admins: {school.userCounts?.admins ?? 0}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -144,9 +166,12 @@ export default async function SuperAdminSchoolsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
-                      {school._count?.users ?? 0}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
+                        {school.userCounts?.total ?? school._count?.users ?? 0}
+                      </span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">All Roles</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">

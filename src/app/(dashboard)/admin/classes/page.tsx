@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { Prisma } from "@prisma/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ClassForm } from "./class-form"
@@ -19,8 +20,12 @@ export default async function AdminClassesPage(
   const page = parseInt(searchParams.page || "1")
   const pageSize = 10
 
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
   const whereCondition: Prisma.ClassWhereInput = {
-    name: { contains: query }
+    name: { contains: query },
+    schoolId: tenantId
   }
 
   const [classes, totalItems, teachers] = await Promise.all([
@@ -34,10 +39,14 @@ export default async function AdminClassesPage(
       take: pageSize,
     }),
     prisma.class.count({ where: whereCondition }),
-    prisma.teacher.findMany({ include: { user: true }, orderBy: { user: { name: 'asc' } } })
+    prisma.teacher.findMany({ where: { user: { schoolId: tenantId } }, include: { user: true, classes: true }, orderBy: { user: { name: 'asc' } } })
   ])
 
-  const mappedTeachers = (Array.isArray(teachers) ? teachers : []).map(t => ({ id: t.id, name: t.user.name }))
+  const mappedTeachers = (Array.isArray(teachers) ? teachers : []).map(t => ({ 
+    id: t.id, 
+    name: t.user.name,
+    assignedClass: t.classes && t.classes.length > 0 ? t.classes[0].name : null 
+  }))
 
   const exportData = classes.map(cls => ({
     name: cls.name,

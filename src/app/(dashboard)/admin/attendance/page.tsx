@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { getEffectiveTenantId } from "@/lib/auth/session"
 import { getAttendanceRecords } from "@/app/actions/attendance"
 import { DateRangePicker } from "@/components/dashboard/date-range-picker"
 import { CalendarDays, Users, AlertTriangle } from "lucide-react"
@@ -23,7 +24,10 @@ export default async function AdminAttendancePage(props: {
 
   const presentPercentage = totalMarked > 0 ? ((present / totalMarked) * 100).toFixed(1) : "0.0"
 
-  const classes = await prisma.class.findMany({ include: { students: true } })
+  const tenantId = await getEffectiveTenantId()
+  if (!tenantId) return <div className="p-6">Unauthorized</div>
+
+  const classes = await prisma.class.findMany({ where: { schoolId: tenantId }, include: { students: true } })
   const classBreakdown = classes.map((cls) => {
     const clsAttendance = attendanceRecords.filter((a) => a.classId === cls.id)
     const clsPresent = clsAttendance.filter((a) => a.status === "PRESENT").length

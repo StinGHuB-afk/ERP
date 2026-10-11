@@ -9,7 +9,8 @@ export async function proxy(request: NextRequest) {
     path.startsWith('/admin') ||
     path.startsWith('/teacher') ||
     path.startsWith('/student') ||
-    path.startsWith('/parent')
+    path.startsWith('/parent') ||
+    path.startsWith('/librarian')
 
   const sessionCookie = request.cookies.get("session")?.value
 
@@ -44,6 +45,10 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url), 307)
     }
 
+    if (path.startsWith('/librarian') && payload.role !== 'LIBRARIAN' && payload.role !== 'ADMIN' && payload.role !== 'SUPERADMIN') {
+      return NextResponse.redirect(new URL("/login", request.url), 307)
+    }
+
     // Forced password change redirect
     if (payload.needsPasswordChange && path !== "/change-password") {
       return NextResponse.redirect(new URL("/change-password", request.url), 307)
@@ -74,5 +79,6 @@ export const config = {
     '/teacher/:path*',
     '/student/:path*',
     '/parent/:path*',
+    '/librarian/:path*',
   ],
 }

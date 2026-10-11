@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 
 export interface AssignSubstituteInput {
@@ -45,8 +45,13 @@ export async function assignSubstitute(data: AssignSubstituteInput): Promise<Act
       return { success: false, error: "Valid from date must be earlier than valid until date." }
     }
 
-    // Verify teacher & class existence
-    const teacher = await prisma.teacher.findUnique({ where: { id: substituteTeacherId } })
+    const effectiveTenantId = await getEffectiveTenantId()
+
+    // Verify teacher & class existence and tenant isolation
+    const teacher = await prisma.teacher.findUnique({ 
+      where: { id: substituteTeacherId },
+      include: { user: { select: { schoolId: true } } }
+    })
     if (!teacher) {
       return { success: false, error: "Substitute teacher not found." }
     }
@@ -54,6 +59,12 @@ export async function assignSubstitute(data: AssignSubstituteInput): Promise<Act
     const targetClass = await prisma.class.findUnique({ where: { id: classId } })
     if (!targetClass) {
       return { success: false, error: "Target class not found." }
+    }
+
+    if (session.role !== "SUPERADMIN") {
+      if (teacher.user.schoolId !== effectiveTenantId || targetClass.schoolId !== effectiveTenantId) {
+        return { success: false, error: "Unauthorized: Resource belongs to another school tenant." }
+      }
     }
 
     const assignment = await prisma.substituteAssignment.create({

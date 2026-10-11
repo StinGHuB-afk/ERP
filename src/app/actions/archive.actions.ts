@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 import { Role } from "@prisma/client"
 
@@ -25,6 +25,8 @@ export async function archiveUser(userId: string, role: Role): Promise<ArchiveUs
       return { success: false, error: "User ID is required." }
     }
 
+    const effectiveTenantId = await getEffectiveTenantId()
+
     const userExists = await prisma.user.findUnique({
       where: { id: userId },
       include: { student: true, teacher: true },
@@ -32,6 +34,10 @@ export async function archiveUser(userId: string, role: Role): Promise<ArchiveUs
 
     if (!userExists) {
       return { success: false, error: "User record not found." }
+    }
+
+    if (session.role !== "SUPERADMIN" && userExists.schoolId !== effectiveTenantId) {
+      return { success: false, error: "Unauthorized: User belongs to another school tenant." }
     }
 
     await prisma.$transaction(async (tx) => {

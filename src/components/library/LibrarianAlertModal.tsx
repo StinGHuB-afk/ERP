@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation"
 import { sendLibraryOverdueAlerts } from "@/app/actions/library.actions"
 import { createAlert } from "@/app/actions/alert"
 import { AlertPriority } from "@prisma/client"
-import { BellRing, Plus, Loader2, AlertCircle, ShieldAlert, CheckCircle2, Send } from "lucide-react"
+import { BellRing, Plus, Loader2, AlertCircle, ShieldAlert, Send } from "lucide-react"
 import { toast } from "sonner"
+
+interface BorrowRecordOverview {
+  status: string
+  dueDate: string | Date
+}
 
 interface LibrarianAlertModalProps {
   schoolId: string
-  borrowRecords?: any[]
+  borrowRecords?: BorrowRecordOverview[]
 }
 
 export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianAlertModalProps) {
@@ -28,8 +33,8 @@ export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianA
   const [customPriority, setCustomPriority] = useState<AlertPriority>("INFO")
   const [requiresAck, setRequiresAck] = useState(false)
 
-  const activeBorrows = borrowRecords.filter((r: any) => r.status === "BORROWED")
-  const overdueBorrows = activeBorrows.filter((r: any) => new Date(r.dueDate) < new Date())
+  const activeBorrows = borrowRecords.filter((r) => r.status === "BORROWED")
+  const overdueBorrows = activeBorrows.filter((r) => new Date(r.dueDate) < new Date())
 
   async function handleDispatchOverdueAlerts() {
     setIsLoading(true)
@@ -44,9 +49,10 @@ export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianA
         setIsOpen(false)
         router.refresh()
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to dispatch library alerts.")
-      setError(err.message || "Failed to dispatch library alerts.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to dispatch library alerts."
+      toast.error(msg)
+      setError(msg)
     } finally {
       setIsLoading(false)
     }
@@ -69,7 +75,7 @@ export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianA
         priority: customPriority,
         requiresAcknowledgement: requiresAck,
         targetPayload: {
-          targetType: targetType as any
+          targetType: targetType as "GLOBAL" | "ALL_TEACHERS" | "ALL_STUDENTS" | "SPECIFIC_CLASSES" | "SPECIFIC_STUDENTS"
         }
       })
 
@@ -83,9 +89,10 @@ export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianA
         setCustomMessage("")
         router.refresh()
       }
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred while publishing alert.")
-      setError(err.message || "An error occurred while publishing alert.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred while publishing alert."
+      toast.error(msg)
+      setError(msg)
     } finally {
       setIsLoading(false)
     }
@@ -196,7 +203,7 @@ export function LibrarianAlertModal({ schoolId, borrowRecords = [] }: LibrarianA
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-[11px] text-slate-600 space-y-1 font-mono">
                 <div className="font-bold text-slate-800">Sample Notification Preview:</div>
                 <div className="italic text-slate-500 bg-white p-2 rounded border border-slate-200">
-                  "OVERDUE NOTICE: Your book 'NCERT Mathematics' was due on Oct 4. It is 3 days OVERDUE. An overdue fine of ₹{3 * fineRate} (₹{fineRate}/day) is imposed per school policy. Please return it immediately."
+                  {`"OVERDUE NOTICE: Your book 'NCERT Mathematics' was due on Oct 4. It is 3 days OVERDUE. An overdue fine of ₹${3 * fineRate} (₹${fineRate}/day) is imposed per school policy. Please return it immediately."`}
                 </div>
               </div>
 

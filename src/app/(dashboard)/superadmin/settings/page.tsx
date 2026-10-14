@@ -1,6 +1,6 @@
 import { verifySession } from "@/lib/auth/session"
 import { redirect } from "next/navigation"
-import { Settings, Server, ShieldCheck, Mail, Database } from "lucide-react"
+import { ShieldCheck, Mail, Database } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 

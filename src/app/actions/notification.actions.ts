@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { AlertPriority, Role } from "@prisma/client"
+import { AlertPriority, Prisma, Role } from "@prisma/client"
 
 export async function getAdminAlerts() {
   const session = await verifySession()
@@ -108,7 +108,7 @@ export async function createBroadcastAlert(formData: FormData) {
   }
 
   // Determine user query filter based on targetRole
-  let userFilter: any = {
+  const userFilter: Prisma.UserWhereInput = {
     isArchived: false
   }
 

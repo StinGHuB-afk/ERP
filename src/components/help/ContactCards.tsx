@@ -1,6 +1,6 @@
 "use client"
 
-import { Phone, Mail, Clock, MapPin, ShieldAlert, Headphones, FileText } from "lucide-react"
+import { Phone, Mail, Clock, Headphones } from "lucide-react"
 
 export type ContactCardItem = {
   title: string

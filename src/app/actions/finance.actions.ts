@@ -31,7 +31,9 @@ async function resolveTenantContext(overrideSchoolId?: string) {
     throw new Error("Unauthorized: Authentication required.")
   }
   const effectiveTenantId = await getEffectiveTenantId()
-  const schoolId = overrideSchoolId || effectiveTenantId || null
+  const schoolId = session.role === Role.SUPERADMIN
+    ? (overrideSchoolId || effectiveTenantId || null)
+    : (session.schoolId || effectiveTenantId || null)
 
   if (session.role !== Role.SUPERADMIN && !schoolId) {
     throw new Error("Orphaned account: No school association found.")
@@ -90,7 +92,7 @@ export async function getFeeStructures(overrideSchoolId?: string) {
       },
       orderBy: { createdAt: "desc" },
     })
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }
@@ -168,7 +170,7 @@ export async function getTransactions(overrideSchoolId?: string) {
       },
       orderBy: { createdAt: "desc" },
     })
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }

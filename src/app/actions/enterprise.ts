@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 import { ProfileEventType, TransportRequestStatus, TransportAssignmentStatus, ProfileUpdateStatus } from "@prisma/client"
 import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
@@ -10,10 +10,8 @@ import {
   RequestedProfileData,
   RequestProfileUpdateInput,
   RequestTransportChangeInput,
-  ProcessTransportRequestInput,
   LogClinicVisitInput,
   UpsertHealthRecordInput,
-  UpdateStudentProfileMetadataInput
 } from "@/types/enterprise"
 
 // ============================================================
@@ -65,9 +63,10 @@ export async function logTimelineEvent(
     revalidatePath(`/admin/students/${studentId}`)
     revalidatePath(`/teacher/student/${studentId}`)
     return { success: true, data: event }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in logTimelineEvent:", error)
-    return { success: false, error: error.message || "Failed to log timeline event." }
+    const msg = error instanceof Error ? error.message : "Failed to log timeline event."
+    return { success: false, error: msg }
   }
 }
 
@@ -164,9 +163,10 @@ export async function requestTransportChange(data: RequestTransportChangeInput) 
     revalidatePath("/parent/transport")
     revalidatePath("/admin/transport")
     return { success: true, data: transportRequest }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in requestTransportChange:", error)
-    return { success: false, error: error.message || "Failed to submit transport change request." }
+    const msg = error instanceof Error ? error.message : "Failed to submit transport change request."
+    return { success: false, error: msg }
   }
 }
 
@@ -192,12 +192,25 @@ export async function processTransportRequest(
       return { success: false, error: "Forbidden: Only administrators can process transport requests." }
     }
 
+    const effectiveTenantId = await getEffectiveTenantId()
+
     const transportRequest = await prisma.transportChangeRequest.findUnique({
       where: { id: requestId },
+      include: {
+        student: {
+          select: {
+            user: { select: { schoolId: true } },
+          },
+        },
+      },
     })
 
     if (!transportRequest) {
       return { success: false, error: "Transport request record not found." }
+    }
+
+    if (session.role !== "SUPERADMIN" && transportRequest.student.user.schoolId !== effectiveTenantId) {
+      return { success: false, error: "Unauthorized: Request belongs to another school tenant." }
     }
 
     if (transportRequest.status !== TransportRequestStatus.PENDING) {
@@ -287,9 +300,10 @@ export async function processTransportRequest(
       revalidatePath("/student/transport")
       return { success: true, data: result }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in processTransportRequest:", error)
-    return { success: false, error: error.message || "Failed to process transport request." }
+    const msg = error instanceof Error ? error.message : "Failed to process transport request."
+    return { success: false, error: msg }
   }
 }
 
@@ -397,9 +411,10 @@ export async function logClinicVisit(data: LogClinicVisitInput) {
     revalidatePath(`/teacher/health/${data.studentId}`)
     revalidatePath(`/admin/health`)
     return { success: true, data: result }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in logClinicVisit:", error)
-    return { success: false, error: error.message || "Failed to log clinic visit." }
+    const msg = error instanceof Error ? error.message : "Failed to log clinic visit."
+    return { success: false, error: msg }
   }
 }
 
@@ -461,9 +476,10 @@ export async function upsertHealthRecord(data: UpsertHealthRecordInput) {
     revalidatePath(`/student`)
     revalidatePath(`/parent`)
     return { success: true, data: healthRecord }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in upsertHealthRecord:", error)
-    return { success: false, error: error.message || "Failed to save health record." }
+    const msg = error instanceof Error ? error.message : "Failed to save health record."
+    return { success: false, error: msg }
   }
 }
 
@@ -545,9 +561,10 @@ export async function getStudent360Profile(studentId: string) {
     }
 
     return { success: true, data: student }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in getStudent360Profile:", error)
-    return { success: false, error: error.message || "Failed to fetch student 360 profile." }
+    const msg = error instanceof Error ? error.message : "Failed to fetch student 360 profile."
+    return { success: false, error: msg }
   }
 }
 
@@ -622,9 +639,10 @@ export async function requestProfileUpdate(data: RequestProfileUpdateInput) {
     revalidatePath(`/student`)
     revalidatePath(`/parent`)
     return { success: true, data: updateRequest }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in requestProfileUpdate:", error)
-    return { success: false, error: error.message || "Failed to submit profile update request." }
+    const msg = error instanceof Error ? error.message : "Failed to submit profile update request."
+    return { success: false, error: msg }
   }
 }
 
@@ -648,12 +666,25 @@ export async function processProfileUpdate(
       return { success: false, error: "Forbidden: Only teachers or administrators can approve profile update requests." }
     }
 
+    const effectiveTenantId = await getEffectiveTenantId()
+
     const request = await prisma.profileUpdateRequest.findUnique({
       where: { id: requestId },
+      include: {
+        student: {
+          select: {
+            user: { select: { schoolId: true } },
+          },
+        },
+      },
     })
 
     if (!request) {
       return { success: false, error: "Profile update request record not found." }
+    }
+
+    if (session.role !== "SUPERADMIN" && request.student.user.schoolId !== effectiveTenantId) {
+      return { success: false, error: "Unauthorized: Request belongs to another school tenant." }
     }
 
     if (request.status !== ProfileUpdateStatus.PENDING) {
@@ -743,8 +774,9 @@ export async function processProfileUpdate(
       revalidatePath(`/parent`)
       return { success: true, data: result }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in processProfileUpdate:", error)
-    return { success: false, error: error.message || "Failed to process profile update request." }
+    const msg = error instanceof Error ? error.message : "Failed to process profile update request."
+    return { success: false, error: msg }
   }
 }

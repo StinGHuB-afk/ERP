@@ -129,7 +129,7 @@ export default async function StudentDashboard() {
                 </TableCell>
               </TableRow>
             ) : (
-              todayPeriods.map((period: any) => (
+              todayPeriods.map((period) => (
                 <TableRow key={period.id}>
                   <TableCell className="font-medium">
                     {period.startTime} - {period.endTime}

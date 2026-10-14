@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
 import { Info } from 'lucide-react'
 
 // Define the AST node types

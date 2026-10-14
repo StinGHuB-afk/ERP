@@ -3,10 +3,9 @@
 import crypto from "crypto"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { Role, AdmissionStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
-import { enforceModuleAccess } from "@/app/actions/entitlements.actions"
 
 export interface SubmitAdmissionEnquiryInput {
   schoolId: string
@@ -26,15 +25,19 @@ async function resolveTenantContext(overrideSchoolId?: string) {
     throw new Error("Unauthorized: Authentication required.")
   }
 
+  const effectiveTenantId = await getEffectiveTenantId()
+
   if (session.role === Role.SUPERADMIN) {
-    return { session, schoolId: overrideSchoolId || session.schoolId || null }
+    return { session, schoolId: overrideSchoolId || effectiveTenantId || session.schoolId || null }
   }
 
-  if (!session.schoolId) {
+  const schoolId = session.schoolId || effectiveTenantId
+
+  if (!schoolId) {
     throw new Error("Orphaned account: No school association found.")
   }
 
-  return { session, schoolId: session.schoolId }
+  return { session, schoolId }
 }
 
 // ============================================================
@@ -152,7 +155,7 @@ export async function getAdmissionEnquiries(overrideSchoolId?: string) {
       },
       orderBy: { createdAt: "desc" },
     })
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }

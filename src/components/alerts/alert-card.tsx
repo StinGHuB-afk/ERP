@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Clock, ShieldAlert, CheckCircle2, BarChart2 } from "lucide-react"
+import { Clock, ShieldAlert, BarChart2 } from "lucide-react"
 import { AlertAckModal } from "./alert-ack-modal"
 
 export interface AlertCardData {

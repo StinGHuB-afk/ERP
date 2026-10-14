@@ -2,9 +2,9 @@ import { Role, TicketStatus } from "@prisma/client"
 import { getSupportTickets, getSupportOverviewStats } from "@/app/actions/support.actions"
 import { FaqAccordion, FaqItem } from "@/components/help/FaqAccordion"
 import { SupportTicketForm } from "@/components/help/SupportTicketForm"
-import { SupportTicketList } from "@/components/help/SupportTicketList"
+import { SupportTicketList, TicketItem } from "@/components/help/SupportTicketList"
 import { ContactCards } from "@/components/help/ContactCards"
-import { Building2, MessageSquare, Send, HelpCircle, Users, BookOpen } from "lucide-react"
+import { Building2, MessageSquare, Send, HelpCircle, Users } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const ADMIN_FAQS: FaqItem[] = [
@@ -46,7 +46,7 @@ const ADMIN_FAQS: FaqItem[] = [
 ]
 
 export default async function AdminHelpPage() {
-  const stats = await getSupportOverviewStats()
+  const _stats = await getSupportOverviewStats()
   const incomingTickets = await getSupportTickets({ scope: "incoming" })
   const mySubmittedTickets = await getSupportTickets({ scope: "mine" })
 
@@ -133,7 +133,7 @@ export default async function AdminHelpPage() {
 
         <TabsContent value="incoming" className="space-y-4">
           <SupportTicketList
-            tickets={incomingTickets as any}
+            tickets={incomingTickets as unknown as TicketItem[]}
             scope="incoming"
             canReply={true}
             title="School Members Support Desk (Teachers, Students, Parents, Librarians)"
@@ -157,7 +157,7 @@ export default async function AdminHelpPage() {
 
         <TabsContent value="mytickets" className="space-y-4">
           <SupportTicketList
-            tickets={mySubmittedTickets as any}
+            tickets={mySubmittedTickets as unknown as TicketItem[]}
             scope="mine"
             canReply={false}
             title="Platform Support Tickets Sent to Superadmin"

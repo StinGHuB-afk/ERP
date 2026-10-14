@@ -6,8 +6,26 @@ import { Badge } from "@/components/ui/badge"
 import { markAlertRead, acknowledgeAlert } from "@/app/actions/alert"
 import { useRouter } from "next/navigation"
 
+export interface AlertRecipientItem {
+  id: string
+  readAt?: Date | string | null
+  acknowledgedAt?: Date | string | null
+  alert: {
+    id: string
+    title: string
+    message: string
+    priority: string
+    requiresAcknowledgement: boolean
+    createdAt: Date | string
+    creator: {
+      name: string | null
+      role: string
+    }
+  }
+}
+
 type AlertInboxListProps = {
-  initialAlerts: any[]
+  initialAlerts: AlertRecipientItem[]
 }
 
 export function AlertInboxList({ initialAlerts }: AlertInboxListProps) {
@@ -50,9 +68,9 @@ export function AlertInboxList({ initialAlerts }: AlertInboxListProps) {
         <div className="h-16 w-16 bg-blue-50 text-blue-400 rounded-full flex items-center justify-center mb-4">
           <BellRing className="h-8 w-8" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-800 mb-2">You're all caught up</h3>
+        <h3 className="text-lg font-semibold text-slate-800 mb-2">You&apos;re all caught up</h3>
         <p className="text-sm text-slate-500 max-w-sm">
-          There are currently no active alerts requiring your attention. We'll notify you when something important comes up.
+          There are currently no active alerts requiring your attention. We&apos;ll notify you when something important comes up.
         </p>
       </div>
     )

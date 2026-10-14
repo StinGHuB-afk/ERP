@@ -34,7 +34,7 @@ export default async function TeacherNotesSubjectPage({ params, searchParams }: 
   if (teacher) {
     try {
       await assertTeacherCanManageContent(teacher.id, subjectId, activeSessionId, classId)
-    } catch (e) {
+    } catch (_e) {
       notFound()
     }
   }

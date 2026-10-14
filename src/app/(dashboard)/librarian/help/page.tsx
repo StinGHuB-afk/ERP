@@ -2,9 +2,9 @@ import { Role } from "@prisma/client"
 import { getSupportTickets } from "@/app/actions/support.actions"
 import { FaqAccordion, FaqItem } from "@/components/help/FaqAccordion"
 import { SupportTicketForm } from "@/components/help/SupportTicketForm"
-import { SupportTicketList } from "@/components/help/SupportTicketList"
+import { SupportTicketList, TicketItem } from "@/components/help/SupportTicketList"
 import { ContactCards } from "@/components/help/ContactCards"
-import { BookOpen, Send, ShieldCheck, HelpCircle } from "lucide-react"
+import { BookOpen } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const LIBRARIAN_FAQS: FaqItem[] = [
@@ -100,7 +100,7 @@ export default async function LibrarianHelpPage() {
 
         <TabsContent value="mytickets" className="space-y-4">
           <SupportTicketList
-            tickets={mySubmittedTickets as any}
+            tickets={mySubmittedTickets as unknown as TicketItem[]}
             scope="mine"
             canReply={false}
             title="My Library Support Tickets Sent to School Admin"

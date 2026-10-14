@@ -12,15 +12,44 @@ import { toast } from "sonner"
 
 import { LibrarianAlertModal } from "./LibrarianAlertModal"
 
-export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any) {
+interface BookItem {
+  id: string
+  title: string
+  author: string
+  isbn?: string | null
+  availableCopies: number
+  totalCopies: number
+}
+
+interface BorrowRecordItem {
+  id: string
+  status: string
+  dueDate: string | Date
+  fineAmount?: number | null
+  book: { title: string }
+  user?: {
+    id?: string
+    name?: string | null
+    email?: string | null
+    role?: string
+  } | null
+}
+
+interface LibrarianDashboardProps {
+  books: BookItem[]
+  borrowRecords: BorrowRecordItem[]
+  schoolId: string
+}
+
+export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: LibrarianDashboardProps) {
   const [activeTab, setActiveTab] = useState("catalog")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Metrics
   const totalTitles = books.length
-  const currentlyBorrowed = borrowRecords.filter((r: any) => r.status === "BORROWED").length
-  const overdueBooks = borrowRecords.filter((r: any) => r.status === "BORROWED" && new Date(r.dueDate) < new Date()).length
-  const totalFines = borrowRecords.reduce((sum: number, r: any) => sum + (r.fineAmount || 0), 0)
+  const currentlyBorrowed = borrowRecords.filter((r) => r.status === "BORROWED").length
+  const overdueBooks = borrowRecords.filter((r) => r.status === "BORROWED" && new Date(r.dueDate) < new Date()).length
+  const totalFines = borrowRecords.reduce((sum: number, r) => sum + (r.fineAmount || 0), 0)
 
   async function handleAddBook(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -28,9 +57,9 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
     const formData = new FormData(e.currentTarget)
     formData.append("schoolId", schoolId)
     
-    const res = await upsertBook(formData)
-    if ((res as any)?.error) {
-      toast.error((res as any).error)
+    const res = await upsertBook(formData) as { success?: boolean; error?: string }
+    if (res?.error) {
+      toast.error(res.error)
     } else {
       toast.success("Book added successfully")
       ;(e.target as HTMLFormElement).reset()
@@ -40,9 +69,9 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
 
   async function handleReturn(recordId: string, isLost: boolean) {
     const fineAmount = isLost ? 50 : 0 // Example static fine for lost book
-    const res = await returnBook(recordId, isLost, fineAmount)
-    if ((res as any)?.error) {
-      toast.error((res as any).error)
+    const res = await returnBook(recordId, isLost, fineAmount) as { success?: boolean; error?: string }
+    if (res?.error) {
+      toast.error(res.error)
     } else {
       toast.success(isLost ? "Marked as lost" : "Book returned")
     }
@@ -56,9 +85,9 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
     const userId = formData.get("userId") as string
     const dueDate = new Date(formData.get("dueDate") as string)
     
-    const res = await borrowBook(bookId, userId, schoolId, dueDate)
-    if ((res as any)?.error) {
-      toast.error((res as any).error)
+    const res = await borrowBook(bookId, userId, schoolId, dueDate) as { success?: boolean; error?: string }
+    if (res?.error) {
+      toast.error(res.error)
     } else {
       toast.success("Book issued successfully")
       ;(e.target as HTMLFormElement).reset()
@@ -138,7 +167,7 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
                     </tr>
                   </thead>
                   <tbody>
-                    {books.map((b: any) => (
+                    {books.map((b) => (
                       <tr key={b.id} className="border-t">
                         <td className="p-3 font-medium">{b.title}</td>
                         <td className="p-3">{b.author}</td>
@@ -167,7 +196,7 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
                   <Label>Book</Label>
                   <select name="bookId" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required>
                     <option value="">Select Book...</option>
-                    {books.filter((b: any) => b.availableCopies > 0).map((b: any) => (
+                    {books.filter((b) => b.availableCopies > 0).map((b) => (
                       <option key={b.id} value={b.id}>{b.title}</option>
                     ))}
                   </select>
@@ -195,7 +224,7 @@ export function LibrarianDashboardClient({ books, borrowRecords, schoolId }: any
                     </tr>
                   </thead>
                   <tbody>
-                    {borrowRecords.filter((r: any) => r.status === "BORROWED").map((r: any) => (
+                    {borrowRecords.filter((r) => r.status === "BORROWED").map((r) => (
                       <tr key={r.id} className="border-t">
                         <td className="p-3 font-medium">{r.book.title}</td>
                         <td className="p-3">

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { GraduationCap, Lock, ArrowLeft, Trophy, CheckCircle2 } from "lucide-react"
 import { PdfExportWrapper } from "@/components/dashboard/pdf-export-wrapper"
 import Link from "next/link"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 
 function calculateGrade(percentage: number): string {
   if (percentage >= 90) return "A+"

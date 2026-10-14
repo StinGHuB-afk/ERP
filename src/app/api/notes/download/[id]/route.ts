@@ -54,18 +54,24 @@ export async function GET(
 
     const signedUrl = await createSignedDownloadUrl(bucket, storagePath, 3600)
     return NextResponse.redirect(signedUrl)
-  } catch (error: any) {
-    if (error.message?.includes('Forbidden') || error.message?.includes('Authorization denied')) {
-      return new NextResponse(error.message, { status: 403 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error'
+    if (message.includes('Forbidden') || message.includes('Authorization denied')) {
+      return new NextResponse(message, { status: 403 })
     }
-    if (error.message?.includes('Object not found')) {
+    if (message.includes('Object not found')) {
       return new NextResponse('File not found in storage', { status: 404 })
     }
-    return new NextResponse(error.message || 'Internal Server Error', { status: 500 })
+    return new NextResponse(message, { status: 500 })
   }
 }
 
-async function authorizeAccess(session: any, subjectId: string, academicSessionId: string, classId: string | null) {
+async function authorizeAccess(
+  session: NonNullable<Awaited<ReturnType<typeof verifySession>>>,
+  subjectId: string,
+  academicSessionId: string,
+  classId: string | null
+) {
   if (session.role === 'ADMIN') return true
 
   if (session.role === 'TEACHER') {

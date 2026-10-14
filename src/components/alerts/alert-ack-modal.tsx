@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useState, useEffect } from "react"
 import { getAlertAcknowledgmentDetails } from "@/app/actions/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, CheckCircle2, Clock, Users, ShieldAlert } from "lucide-react"
+import { Loader2, CheckCircle2, Clock, Users } from "lucide-react"
 
 interface AlertAckModalProps {
   alertId: string | null
@@ -44,10 +44,13 @@ export function AlertAckModal({ alertId, isOpen, onClose }: AlertAckModalProps) 
   const [activeTab, setActiveTab] = useState<string>("ALL")
 
   useEffect(() => {
+    let isCancelled = false
     if (!isOpen || !alertId) {
-      setData(null)
-      setError(null)
-      return
+      const timer = setTimeout(() => {
+        setData(null)
+        setError(null)
+      }, 0)
+      return () => clearTimeout(timer)
     }
 
     async function fetchDetails() {
@@ -55,19 +58,26 @@ export function AlertAckModal({ alertId, isOpen, onClose }: AlertAckModalProps) 
       setError(null)
       try {
         const res = await getAlertAcknowledgmentDetails(alertId!)
+        if (isCancelled) return
         if (res.error) {
           setError(res.error)
         } else if (res.details) {
           setData(res.details as AckDetailsData)
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to load details.")
+      } catch (err: unknown) {
+        if (!isCancelled) setError(err instanceof Error ? err.message : "Failed to load details.")
       } finally {
-        setLoading(false)
+        if (!isCancelled) setLoading(false)
       }
     }
 
-    fetchDetails()
+    const timer = setTimeout(() => {
+      fetchDetails()
+    }, 0)
+    return () => {
+      isCancelled = true
+      clearTimeout(timer)
+    }
   }, [alertId, isOpen])
 
   if (!isOpen) return null

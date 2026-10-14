@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AssignSubstituteForm } from "@/components/forms/AssignSubstituteForm"
-import { ArrowLeft, UserCheck, Calendar, Clock, BookOpen, ShieldCheck } from "lucide-react"
+import { ArrowLeft, UserCheck, Calendar, Clock, ShieldCheck } from "lucide-react"
 
 export default async function AdminSubstituteDashboardPage() {
   const session = await verifySession()

@@ -39,10 +39,11 @@ export async function createSession(data: { name: string; startDate: Date; endDa
 
     revalidatePath("/admin/academic-session");
     return session;
-  } catch (error: any) {
-    const errorMsg = error?.message || error?.cause?.message || String(error);
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; cause?: { message?: string } }
+    const errorMsg = err?.message || err?.cause?.message || String(error);
     if (
-      error.code === "P2002" ||
+      err?.code === "P2002" ||
       errorMsg.includes("UNIQUE constraint failed") ||
       errorMsg.includes("already exists")
     ) {

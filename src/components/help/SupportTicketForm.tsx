@@ -37,7 +37,7 @@ const DEFAULT_CATEGORIES = [
 ]
 
 export function SupportTicketForm({
-  userRole,
+  userRole: _userRole,
   availableTargetRoles,
   teachersList = [],
   categories = DEFAULT_CATEGORIES,
@@ -79,8 +79,9 @@ export function SupportTicketForm({
       setSubject("")
       setMessage("")
       if (onSuccess) onSuccess()
-    } catch (err: any) {
-      setError(err.message || "Failed to submit support ticket. Please try again.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to submit support ticket. Please try again."
+      setError(msg)
     } finally {
       setLoading(false)
     }

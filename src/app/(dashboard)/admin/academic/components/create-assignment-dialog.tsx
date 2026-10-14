@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -59,10 +59,26 @@ export function CreateAssignmentDialog({
       classId: classes[0]?.id || "",
       subjectId: subjects[0]?.id || "",
       teacherId: teachers[0]?.id || "",
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      dueDate: "",
       maxMarks: "100",
     },
   })
+
+  useEffect(() => {
+    if (open) {
+      const due = new Date()
+      due.setDate(due.getDate() + 7)
+      reset({
+        title: "",
+        description: "",
+        classId: classes[0]?.id || "",
+        subjectId: subjects[0]?.id || "",
+        teacherId: teachers[0]?.id || "",
+        dueDate: due.toISOString().split("T")[0],
+        maxMarks: "100",
+      })
+    }
+  }, [open, classes, subjects, teachers, reset])
 
   const onSubmit = (data: FormValues) => {
     setError(null)

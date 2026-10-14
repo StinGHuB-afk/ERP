@@ -44,10 +44,8 @@ import {
 } from "@/app/actions/payroll.actions"
 import {
   DollarSign,
-  Users,
   UserCheck,
   UserX,
-  Calendar,
   Play,
   CheckCircle2,
   Clock,
@@ -55,7 +53,6 @@ import {
   Edit,
   Eye,
   AlertCircle,
-  TrendingUp,
 } from "lucide-react"
 
 const MONTH_NAMES = [

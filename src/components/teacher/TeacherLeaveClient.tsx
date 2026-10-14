@@ -5,12 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Briefcase, Plus, Calendar, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { Plus, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { createLeaveRequest } from "@/app/actions/operations.actions"
 import { LeaveType } from "@prisma/client"
 import { toast } from "sonner"
 
-export function TeacherLeaveClient({ leaveRequests }: { leaveRequests: any[] }) {
+export interface TeacherLeaveItem {
+  id: string
+  type: LeaveType
+  startDate: Date | string
+  endDate: Date | string
+  reason: string
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  adminNote?: string | null
+  reviewer?: { name?: string | null; email?: string | null } | null
+  createdAt: Date | string
+}
+
+export function TeacherLeaveClient({ leaveRequests }: { leaveRequests: TeacherLeaveItem[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -29,8 +41,8 @@ export function TeacherLeaveClient({ leaveRequests }: { leaveRequests: any[] }) 
       toast.success("Leave request submitted successfully!")
       setShowForm(false)
       ;(e.target as HTMLFormElement).reset()
-    } catch (err: any) {
-      toast.error(err.message || "Failed to submit leave request.")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit leave request.")
     } finally {
       setIsSubmitting(false)
     }

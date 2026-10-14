@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { History } from "lucide-react"
 
 type Enrollment = {
@@ -22,7 +22,7 @@ export function StudentHistoryDialog({ studentName, enrollments }: { studentName
       <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{studentName}'s Enrollment History</DialogTitle>
+          <DialogTitle>{studentName}&apos;s Enrollment History</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
           {enrollments.length === 0 ? (

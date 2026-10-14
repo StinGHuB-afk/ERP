@@ -41,11 +41,23 @@ export async function upsertSalaryStructure(formData: FormData) {
     const allowancesRaw = Number(formData.get("allowances"))
     const deductionsRaw = Number(formData.get("deductions"))
 
-    const baseSalary = isNaN(baseSalaryRaw) ? 0 : Math.max(0, baseSalaryRaw)
-    const allowances = isNaN(allowancesRaw) ? 0 : Math.max(0, allowancesRaw)
-    const deductions = isNaN(deductionsRaw) ? 0 : Math.max(0, deductionsRaw)
+    if (isNaN(baseSalaryRaw) || baseSalaryRaw < 0) {
+      throw new Error("Base salary must be a non-negative number.")
+    }
+    if (isNaN(allowancesRaw) || allowancesRaw < 0) {
+      throw new Error("Allowances must be a non-negative number.")
+    }
+    if (isNaN(deductionsRaw) || deductionsRaw < 0) {
+      throw new Error("Deductions must be a non-negative number.")
+    }
+    if (deductionsRaw > baseSalaryRaw + allowancesRaw) {
+      throw new Error("Deductions cannot exceed gross salary (base salary + allowances).")
+    }
 
-    const netSalary = Math.max(0, baseSalary + allowances - deductions)
+    const baseSalary = baseSalaryRaw
+    const allowances = allowancesRaw
+    const deductions = deductionsRaw
+    const netSalary = baseSalary + allowances - deductions
 
     // Verify target user belongs to the same tenant context
     const targetUser = await prisma.user.findFirst({
@@ -80,9 +92,9 @@ export async function upsertSalaryStructure(formData: FormData) {
     revalidatePath("/admin/finance")
 
     return { success: true, data: structure }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in upsertSalaryStructure:", error)
-    return { success: false, error: error.message || "Failed to update salary structure." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to update salary structure." }
   }
 }
 
@@ -180,9 +192,9 @@ export async function generatePayrollRun(month: number, year: number) {
     revalidatePath("/admin/finance")
 
     return { success: true, data: payrollRun }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in generatePayrollRun:", error)
-    return { success: false, error: error.message || "Failed to generate payroll run." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to generate payroll run." }
   }
 }
 
@@ -225,12 +237,20 @@ export async function executePayrollPayout(payrollRunId: string) {
       throw new Error("Payroll run has already been processed or completed.")
     }
 
+    if (payrollRun.payslips.length === 0) {
+      throw new Error("Cannot execute payout for a payroll run with no generated payslips.")
+    }
+
     await prisma.$transaction(async (tx) => {
-      // 1. Mark PayrollRun as COMPLETED
-      await tx.payrollRun.update({
-        where: { id: payrollRun.id },
+      // 1. Atomic compare-and-swap to guarantee idempotency and prevent double payouts
+      const updateResult = await tx.payrollRun.updateMany({
+        where: { id: payrollRun.id, schoolId, status: PayrollStatus.DRAFT },
         data: { status: PayrollStatus.COMPLETED },
       })
+
+      if (updateResult.count === 0) {
+        throw new Error("Payroll run has already been processed or completed.")
+      }
 
       // 2. Loop through each payslip to create Transaction ledger entries and mark payslips as PAID
       for (const payslip of payrollRun.payslips) {
@@ -261,9 +281,9 @@ export async function executePayrollPayout(payrollRunId: string) {
     revalidatePath("/admin/finance")
 
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in executePayrollPayout:", error)
-    return { success: false, error: error.message || "Failed to execute payroll payout." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to execute payroll payout." }
   }
 }
 
@@ -326,7 +346,7 @@ export async function getPayrollDashboardData() {
       payrollRuns,
       unconfiguredStaff,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in getPayrollDashboardData:", error)
     return { salaryStructures: [], payrollRuns: [], unconfiguredStaff: [] }
   }

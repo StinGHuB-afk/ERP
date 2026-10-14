@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { TransportRequestActions } from "./transport-request-actions"
-import { Bus, Clock, CheckCircle2, XCircle, Users, ArrowRight, ShieldCheck } from "lucide-react"
+import { Bus, Clock, CheckCircle2, Users, ArrowRight, ShieldCheck } from "lucide-react"
 import { getTenantModules } from "@/app/actions/entitlements.actions"
 import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
 
@@ -23,7 +23,7 @@ export default async function AdminTransportPage() {
   const tenantId = await getEffectiveTenantId()
   if (!tenantId) return <div className="p-6">Unauthorized</div>
 
-  const [pendingRequests, activeAssignments, recentProcessed] = await Promise.all([
+  const [pendingRequests, activeAssignments, _recentProcessed] = await Promise.all([
     prisma.transportChangeRequest.findMany({
       where: { status: "PENDING", student: { user: { schoolId: tenantId } } },
       include: {

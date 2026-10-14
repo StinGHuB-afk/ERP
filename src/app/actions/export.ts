@@ -1,5 +1,6 @@
 "use server"
 
+import { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 
@@ -14,7 +15,7 @@ export async function exportAllStudents(classId?: string) {
     throw new Error("Unauthorized")
   }
 
-  const where: any = {}
+  const where: Prisma.StudentWhereInput = {}
   if (classId === "unassigned") {
     where.classId = null
   } else if (classId && classId !== "all" && classId.trim() !== "") {

@@ -5,7 +5,6 @@ import prisma from "@/lib/prisma"
 import { getEffectiveTenantId } from "@/lib/auth/session"
 import { getTenantModules } from "@/app/actions/entitlements.actions"
 import { LockedModuleTeaser } from "@/components/ui/locked-module-teaser"
-import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,

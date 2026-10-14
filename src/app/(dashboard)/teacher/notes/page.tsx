@@ -19,7 +19,8 @@ export default async function TeacherNotesIndex() {
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" }})
   const activeSessionId = settings?.activeSessionId
 
-  let assignments: any[] = []
+  type TeacherHubAssignment = Awaited<ReturnType<typeof getTeacherLearningHubAssignments>>[number]
+  let assignments: TeacherHubAssignment[] = []
   if (activeSessionId) {
     assignments = await getTeacherLearningHubAssignments(teacher.id, activeSessionId)
   }

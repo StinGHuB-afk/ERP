@@ -40,12 +40,23 @@ export function ManageModulesDialog({ schoolId, schoolName }: ManageModulesDialo
   const router = useRouter()
 
   useEffect(() => {
+    let isCancelled = false
     if (open) {
-      setIsLoading(true)
-      getModulesForSchool(schoolId)
-        .then(setModules)
-        .catch(console.error)
-        .finally(() => setIsLoading(false))
+      const timer = setTimeout(() => {
+        setIsLoading(true)
+        getModulesForSchool(schoolId)
+          .then((data) => {
+            if (!isCancelled) setModules(data)
+          })
+          .catch(console.error)
+          .finally(() => {
+            if (!isCancelled) setIsLoading(false)
+          })
+      }, 0)
+      return () => {
+        isCancelled = true
+        clearTimeout(timer)
+      }
     }
   }, [open, schoolId])
 

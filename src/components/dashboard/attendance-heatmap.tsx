@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useSyncExternalStore } from "react"
-import { Calendar, ChevronLeft, ChevronRight, Info } from "lucide-react"
+import { Calendar, Info } from "lucide-react"
 
 const emptySubscribe = () => () => {}
 function useIsMounted() {

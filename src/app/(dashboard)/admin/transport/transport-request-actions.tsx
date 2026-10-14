@@ -15,7 +15,7 @@ interface TransportRequestActionsProps {
 export function TransportRequestActions({
   requestId,
   studentName,
-  requestedRouteName,
+  requestedRouteName: _requestedRouteName,
 }: TransportRequestActionsProps) {
   const [isPending, startTransition] = useTransition()
   const [showRejectInput, setShowRejectInput] = useState(false)

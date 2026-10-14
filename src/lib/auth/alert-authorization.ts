@@ -45,7 +45,7 @@ export async function resolveAndAuthorizeAlertTargets(
 async function resolveLibrarianTargets(
   userId: string,
   payload: AlertTargetPayload,
-  academicSessionId: string
+  _academicSessionId: string
 ): Promise<string[]> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { schoolId: true } })
   if (!user?.schoolId) {

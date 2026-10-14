@@ -67,8 +67,9 @@ export async function archiveUser(userId: string, role: Role): Promise<ArchiveUs
     revalidatePath("/admin/students")
     revalidatePath("/admin/teachers")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in archiveUser:", error)
-    return { success: false, error: error.message || "Failed to archive user." }
+    const msg = error instanceof Error ? error.message : "Failed to archive user."
+    return { success: false, error: msg }
   }
 }

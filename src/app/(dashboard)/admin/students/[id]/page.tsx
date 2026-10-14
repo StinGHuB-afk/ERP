@@ -10,18 +10,13 @@ import { UpdateHealthRecordForm } from "@/components/forms/UpdateHealthRecordFor
 import { ArchiveUserModal } from "@/components/modals/ArchiveUserModal"
 import {
   ArrowLeft,
-  User,
   GraduationCap,
   Bus,
   HeartPulse,
   Clock,
-  ShieldAlert,
   Phone,
   AlertTriangle,
   FileText,
-  Activity,
-  CheckCircle2,
-  Calendar,
   Stethoscope,
 } from "lucide-react"
 

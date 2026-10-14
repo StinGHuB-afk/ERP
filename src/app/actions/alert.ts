@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { resolveAndAuthorizeAlertTargets, assertAlertCreatorOrAdmin, AlertTargetPayload } from "@/lib/auth/alert-authorization"
 import { requireActiveSessionId } from "@/lib/auth/teacher-authorization"
-import { AlertPriority, AlertStatus, Role } from "@prisma/client"
+import { AlertPriority, AlertStatus, Role, Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 
 export type CreateAlertInput = {
@@ -31,7 +31,7 @@ export async function createAlert(input: CreateAlertInput) {
     // 1. Resolve and Authorize Targets
     const targetUserIds = await resolveAndAuthorizeAlertTargets(
       session.userId,
-      session.role as any, // Cast to Role Enum
+      session.role as Role,
       input.targetPayload,
       academicSessionId
     )
@@ -70,9 +70,10 @@ export async function createAlert(input: CreateAlertInput) {
     revalidatePath("/dashboard")
     revalidatePath("/admin/alerts")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Alert creation failed:", error)
-    return { error: error.message || "An unexpected error occurred." }
+    const msg = error instanceof Error ? error.message : "An unexpected error occurred."
+    return { error: msg }
   }
 }
 
@@ -86,19 +87,16 @@ export async function getMyAlerts(filter: "ACTIVE" | "HISTORY" = "ACTIVE") {
 
     const now = new Date()
 
-    const whereClause: any = {
+    const whereClause: Prisma.AlertRecipientWhereInput = {
       userId: session.userId,
       alert: {
-        status: { in: ["PUBLISHED", "ARCHIVED"] }
-      }
-    }
-
-    if (filter === "ACTIVE") {
-      whereClause.alert.status = "PUBLISHED"
-      whereClause.alert.OR = [
-        { expiresAt: null },
-        { expiresAt: { gt: now } }
-      ]
+        status: filter === "ACTIVE" ? "PUBLISHED" : { in: ["PUBLISHED", "ARCHIVED"] },
+        ...(filter === "ACTIVE"
+          ? {
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            }
+          : {}),
+      },
     }
 
     const recipients = await prisma.alertRecipient.findMany({
@@ -199,7 +197,7 @@ export async function markAlertRead(alertId: string) {
     })
     revalidatePath("/dashboard")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to mark alert as read:", error)
     return { error: "Failed to update read status." }
   }
@@ -355,7 +353,7 @@ export async function getAlertAcknowledgmentDetails(alertId: string) {
         roles: Object.values(rolesGroupMap)
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to fetch alert acknowledgment details:", error)
     return { error: "Failed to fetch acknowledgment details." }
   }
@@ -379,9 +377,10 @@ export async function updateAlertStatus(alertId: string, status: AlertStatus) {
     revalidatePath("/dashboard")
     revalidatePath("/admin/alerts")
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to update alert status:", error)
-    return { error: error.message || "Failed to update alert status." }
+    const msg = error instanceof Error ? error.message : "Failed to update alert status."
+    return { error: msg }
   }
 }
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { submitAdmissionEnquiry } from "@/app/actions/admission.actions"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { UserPlus, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 
@@ -81,8 +81,8 @@ export function CreateApplicationDialog({ classes, schoolId }: CreateApplication
         } else {
           setError("Failed to create application enquiry.")
         }
-      } catch (err: any) {
-        setError(err.message || "An unexpected error occurred.")
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "An unexpected error occurred.")
       }
     })
   }

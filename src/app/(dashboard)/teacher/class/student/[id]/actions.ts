@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { revalidatePath } from "next/cache"
 
-import { calculateGrade } from "@/lib/academic/grading"
 import { assertClassTeacherOwnership } from "@/lib/auth/teacher-authorization"
 
 export async function saveRemarks(studentId: string, classId: string, academicSessionId: string, remarks: string, expectedSessionId?: string) {
@@ -122,6 +121,40 @@ export async function publishReport(
       where: { studentId, academicSessionId, status: "ACTIVE" }
     })
 
+    // Server-side mark aggregation & verification
+    const marks = await prisma.mark.findMany({
+      where: { studentId, academicSessionId },
+    })
+
+    let computedPercentage = finalPercentage
+    let computedGrade = finalGrade
+
+    if (marks.length > 0) {
+      let totalObtained = 0
+      let totalMax = 0
+      marks.forEach((m) => {
+        if (m.score !== null && !isNaN(m.score)) {
+          totalObtained += m.score
+          totalMax += m.maxScore || 100
+        }
+      })
+      if (totalMax > 0) {
+        computedPercentage = Number(((totalObtained / totalMax) * 100).toFixed(2))
+        computedGrade =
+          computedPercentage >= 90
+            ? "A+"
+            : computedPercentage >= 80
+            ? "A"
+            : computedPercentage >= 70
+            ? "B"
+            : computedPercentage >= 60
+            ? "C"
+            : computedPercentage >= 50
+            ? "D"
+            : "F"
+      }
+    }
+
     await prisma.studentAcademicRecord.upsert({
       where: {
         studentId_academicSessionId: {
@@ -130,8 +163,8 @@ export async function publishReport(
         }
       },
       update: {
-        finalPercentage,
-        finalGrade,
+        finalPercentage: computedPercentage,
+        finalGrade: computedGrade,
         teacherRemarks: remarks,
         status: "PUBLISHED",
         publishedAt: new Date()
@@ -141,8 +174,8 @@ export async function publishReport(
         classId,
         academicSessionId,
         enrollmentId: enrollment?.id,
-        finalPercentage,
-        finalGrade,
+        finalPercentage: computedPercentage,
+        finalGrade: computedGrade,
         teacherRemarks: remarks,
         status: "PUBLISHED",
         publishedAt: new Date()

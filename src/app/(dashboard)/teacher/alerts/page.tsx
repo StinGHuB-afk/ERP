@@ -92,7 +92,7 @@ export default async function TeacherAlertsPage() {
           <div className="space-y-4">
             {myPublishedAlerts.length === 0 ? (
               <div className="rounded-xl border bg-slate-50 p-8 text-center text-slate-500 text-sm">
-                You haven't published any alerts yet.
+                You haven&apos;t published any alerts yet.
                 {assignedClasses.length === 0 && <div className="mt-2 text-slate-400">Only Class Teachers can publish alerts.</div>}
               </div>
             ) : (

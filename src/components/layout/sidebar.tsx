@@ -22,7 +22,6 @@ import {
   Shield,
   DollarSign,
   Briefcase,
-  Layers,
   ArrowUpRight,
   Lock,
 } from "lucide-react"

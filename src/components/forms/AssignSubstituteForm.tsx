@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { assignSubstitute } from "@/app/actions/substitute.actions"
 import { Button } from "@/components/ui/button"
-import { UserCheck, AlertCircle, CheckCircle2, Loader2, Calendar, BookOpen, Clock } from "lucide-react"
+import { UserCheck, AlertCircle, CheckCircle2, Loader2, BookOpen, Clock } from "lucide-react"
 
 interface TeacherOption {
   id: string

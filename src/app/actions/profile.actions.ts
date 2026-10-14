@@ -2,12 +2,11 @@
 
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
-import { revalidatePath } from "next/cache"
-import { ProfileUpdateStatus, ProfileEventType } from "@prisma/client"
+import { ProfileUpdateStatus } from "@prisma/client"
 import { requestProfileUpdate, processProfileUpdate } from "@/app/actions/enterprise"
 import { RequestProfileUpdateInput } from "@/types/enterprise"
 
-export interface ProfileActionResult<T = any> {
+export interface ProfileActionResult<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -60,8 +59,8 @@ export async function getPendingProfileUpdatesWithProofs(): Promise<ProfileActio
     })
 
     return { success: true, data: requests }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in getPendingProfileUpdatesWithProofs:", error)
-    return { success: false, error: error.message || "Failed to fetch pending profile updates." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch pending profile updates." }
   }
 }

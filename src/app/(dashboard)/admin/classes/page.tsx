@@ -74,7 +74,7 @@ export default async function AdminClassesPage(
             data={exportData as Record<string, unknown>[]}
             filename="Classes_Export"
             columns={exportColumns}
-            fetchAllAction={exportAllClasses.bind(null) as any}
+            fetchAllAction={exportAllClasses}
             label="Export All Classes"
           />
           <ClassForm teachers={mappedTeachers} />

@@ -11,7 +11,7 @@ export interface AssignSubstituteInput {
   validUntil: Date | string
 }
 
-export interface ActionResult<T = any> {
+export interface ActionResult<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -88,9 +88,9 @@ export async function assignSubstitute(data: AssignSubstituteInput): Promise<Act
     revalidatePath(`/admin/classes`)
     revalidatePath(`/teacher/classes`)
     return { success: true, data: assignment }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in assignSubstitute:", error)
-    return { success: false, error: error.message || "Failed to assign substitute teacher." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to assign substitute teacher." }
   }
 }
 
@@ -130,9 +130,9 @@ export async function getActiveSubstitute(classId: string): Promise<ActionResult
     })
 
     return { success: true, data: activeAssignment }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in getActiveSubstitute:", error)
-    return { success: false, error: error.message || "Failed to fetch active substitute assignment." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch active substitute assignment." }
   }
 }
 
@@ -161,8 +161,8 @@ export async function getTeacherSubstituteAssignments(teacherId: string): Promis
     })
 
     return { success: true, data: assignments }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in getTeacherSubstituteAssignments:", error)
-    return { success: false, error: error.message || "Failed to fetch teacher substitute assignments." }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch teacher substitute assignments." }
   }
 }

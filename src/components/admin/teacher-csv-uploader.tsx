@@ -1,16 +1,106 @@
 "use client"
 
-import { useState, useTransition, ChangeEvent, DragEvent } from "react"
+import { useState, useTransition, useEffect, ChangeEvent, DragEvent, useMemo } from "react"
 import Papa from "papaparse"
-import { bulkUploadTeachers, TeacherUploadRecord } from "@/app/actions/onboarding"
+import {
+  bulkUploadTeachers,
+  getOnboardingContext,
+  checkExistingTeacherIdentifiers,
+  OnboardingContextResult,
+} from "@/app/actions/onboarding"
+import {
+  RawTeacherRow,
+  ValidatedTeacherRow,
+  validateTeacherRows,
+  autoResolveTeacherRows,
+  generateCredentialsCSV,
+} from "@/lib/onboarding-validator"
 import { toast } from "sonner"
-import { Upload, FileText, CheckCircle2, Loader2, X, Download } from "lucide-react"
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  Loader2,
+  X,
+  Download,
+  AlertTriangle,
+  Wand2,
+  Edit3,
+  Search,
+  Check,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export function TeacherCsvUploader() {
   const [isPending, startTransition] = useTransition()
-  const [parsedData, setParsedData] = useState<TeacherUploadRecord[]>([])
+  const [onboardingMeta, setOnboardingMeta] = useState<OnboardingContextResult | null>(null)
+  const [_rawRows, setRawRows] = useState<RawTeacherRow[]>([])
+  const [validatedRows, setValidatedRows] = useState<ValidatedTeacherRow[]>([])
   const [fileName, setFileName] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [filterMode, setFilterMode] = useState<"ALL" | "ANOMALIES" | "DUPLICATES">("ALL")
+  const [searchTerm, setSearchTerm] = useState("")
+
+  // Quick edit modal state
+  const [editingRow, setEditingRow] = useState<ValidatedTeacherRow | null>(null)
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    teacherId: "",
+    specialization: "",
+    qualification: "",
+    password: "",
+  })
+
+  // Post-upload completion credentials
+  const [completedCredentials, setCompletedCredentials] = useState<
+    Array<{
+      name: string
+      email: string
+      idOrRoll: string
+      classOrSubject: string | null
+      password: string
+      status: string
+    }> | null
+  >(null)
+  const [uploadStats, setUploadStats] = useState<{ count: number; skipped: number } | null>(null)
+
+  useEffect(() => {
+    async function loadMeta() {
+      const res = await getOnboardingContext()
+      if ("error" in res) {
+        toast.error(res.error)
+      } else {
+        setOnboardingMeta(res)
+      }
+    }
+    loadMeta()
+  }, [])
+
+  const schoolDomain = onboardingMeta?.schoolDomain || "school.edu"
+
+  const runValidation = async (raw: RawTeacherRow[]) => {
+    const emailsToCheck = raw.map((r) => r.email || "").filter(Boolean)
+    const idsToCheck = raw.map((r) => r.teacherId || "").filter(Boolean)
+
+    let existingEmails = new Set<string>()
+    let existingIds = new Set<string>()
+
+    if (emailsToCheck.length > 0 || idsToCheck.length > 0) {
+      const checkRes = await checkExistingTeacherIdentifiers({
+        emails: emailsToCheck,
+        teacherIds: idsToCheck,
+      })
+      if (!("error" in checkRes)) {
+        existingEmails = new Set(checkRes.existingEmails)
+        existingIds = new Set(checkRes.existingTeacherIds)
+      }
+    }
+
+    const validated = validateTeacherRows(raw, existingEmails, existingIds)
+    setValidatedRows(validated)
+  }
 
   const processFile = (file: File) => {
     if (!file.name.endsWith(".csv")) {
@@ -19,57 +109,57 @@ export function TeacherCsvUploader() {
     }
 
     setFileName(file.name)
+    setCompletedCredentials(null)
+    setUploadStats(null)
 
     Papa.parse<Record<string, string>>(file, {
       header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
+      skipEmptyLines: "greedy",
+      complete: async (results) => {
         if (results.errors.length > 0 && results.data.length === 0) {
-          toast.error("Failed to parse CSV file. Check formatting.")
+          toast.error("Failed to parse CSV file. Please check file structure.")
           return
         }
 
-        const sanitized: TeacherUploadRecord[] = results.data
-          .map((row) => {
-            const keys = Object.keys(row)
-            const getVal = (name: string) => {
-              const matchKey = keys.find((k) => k.trim().toLowerCase() === name.toLowerCase())
-              return matchKey ? row[matchKey]?.trim() ?? "" : ""
-            }
+        const parsed: RawTeacherRow[] = results.data.map((row) => {
+          const keys = Object.keys(row)
+          const getVal = (name: string) => {
+            const matchKey = keys.find((k) => k.trim().toLowerCase() === name.toLowerCase())
+            return matchKey ? row[matchKey]?.trim() ?? "" : ""
+          }
 
-            const name = getVal("name") || getVal("teachername") || getVal("fullname")
-            const email = (getVal("email") || getVal("teacheremail")).toLowerCase()
-            
-            const teacherId =
-              getVal("teacheruniqueid") ||
-              getVal("teacherid") ||
-              getVal("uniqueid") ||
-              getVal("staffid") ||
-              getVal("id")
+          const name = getVal("name") || getVal("teachername") || getVal("fullname")
+          const email = getVal("email") || getVal("teacheremail")
+          const teacherId =
+            getVal("teacheruniqueid") ||
+            getVal("teacherid") ||
+            getVal("uniqueid") ||
+            getVal("staffid") ||
+            getVal("id")
+          const specialization = getVal("specialization") || getVal("subject") || getVal("department")
+          const qualification = getVal("qualification") || getVal("degree")
+          const password = getVal("password")
 
-            const specialization = getVal("specialization") || getVal("subject") || getVal("department")
-            const qualification = getVal("qualification") || getVal("degree")
-            const password = getVal("password")
+          return {
+            name,
+            email,
+            teacherId,
+            specialization,
+            qualification,
+            password,
+          }
+        })
 
-            return {
-              name,
-              email,
-              teacherId: teacherId || null,
-              specialization: specialization || null,
-              qualification: qualification || null,
-              password: password || null,
-            }
-          })
-          .filter((item) => item.name.length > 0 && item.email.length > 0)
-
-        if (sanitized.length === 0) {
-          toast.error("No valid teacher rows found. Ensure CSV has 'Name' and 'Email' headers.")
-          setParsedData([])
+        if (parsed.length === 0) {
+          toast.error("CSV file is empty.")
+          setRawRows([])
+          setValidatedRows([])
           return
         }
 
-        setParsedData(sanitized)
-        toast.success(`Successfully parsed ${sanitized.length} teacher records from CSV.`)
+        setRawRows(parsed)
+        await runValidation(parsed)
+        toast.success(`Parsed ${parsed.length} teacher rows from CSV. Anomaly engine active.`)
       },
       error: (err) => {
         toast.error(`CSV Parsing Error: ${err.message}`)
@@ -99,31 +189,143 @@ export function TeacherCsvUploader() {
   }
 
   const handleClear = () => {
-    setParsedData([])
+    setRawRows([])
+    setValidatedRows([])
     setFileName(null)
+    setCompletedCredentials(null)
+    setUploadStats(null)
   }
 
+  const handleAutoResolveAll = () => {
+    if (validatedRows.length === 0) return
+    const resolved = autoResolveTeacherRows(validatedRows, schoolDomain)
+    setValidatedRows(resolved)
+    toast.success("Auto-resolved all missing teacher emails, passwords, and IDs!")
+  }
+
+  const openFixModal = (row: ValidatedTeacherRow) => {
+    setEditingRow(row)
+    setEditForm({
+      name: row.name,
+      email: row.email,
+      teacherId: row.teacherId,
+      specialization: row.specialization,
+      qualification: row.qualification,
+      password: row.password,
+    })
+  }
+
+  const handleSaveFix = () => {
+    if (!editingRow) return
+
+    const updatedRows = validatedRows.map((r) => {
+      if (r.rowId === editingRow.rowId) {
+        return {
+          ...r,
+          name: editForm.name.trim(),
+          email: editForm.email.trim().toLowerCase(),
+          teacherId: editForm.teacherId.trim(),
+          specialization: editForm.specialization.trim(),
+          qualification: editForm.qualification.trim(),
+          password: editForm.password.trim(),
+          anomalies: [],
+          status: "FIXED" as const,
+          errorMessages: [],
+        }
+      }
+      return r
+    })
+
+    setValidatedRows(updatedRows)
+    setEditingRow(null)
+    toast.success(`Updated ${editForm.name || "teacher record"}`)
+  }
+
+  const displayedRows = useMemo(() => {
+    return validatedRows.filter((r) => {
+      if (filterMode === "ANOMALIES" && r.status !== "ANOMALY") return false
+      if (filterMode === "DUPLICATES" && r.status !== "DUPLICATE_DB" && r.status !== "DUPLICATE_CSV") return false
+
+      if (searchTerm.trim().length > 0) {
+        const q = searchTerm.toLowerCase()
+        const matchesName = r.name.toLowerCase().includes(q)
+        const matchesEmail = r.email.toLowerCase().includes(q)
+        const matchesId = r.teacherId.toLowerCase().includes(q)
+        const matchesSpec = r.specialization.toLowerCase().includes(q)
+        if (!matchesName && !matchesEmail && !matchesId && !matchesSpec) return false
+      }
+
+      return true
+    })
+  }, [validatedRows, filterMode, searchTerm])
+
+  const totalCount = validatedRows.length
+  const anomalyCount = validatedRows.filter((r) => r.status === "ANOMALY").length
+  const duplicateCount = validatedRows.filter(
+    (r) => r.status === "DUPLICATE_DB" || r.status === "DUPLICATE_CSV"
+  ).length
+  const readyCount = validatedRows.filter((r) => r.status === "READY" || r.status === "FIXED").length
+
   const handleUpload = () => {
-    if (parsedData.length === 0) return
+    if (validatedRows.length === 0) return
+
+    const payload = validatedRows.map((r) => ({
+      name: r.name,
+      email: r.email,
+      teacherId: r.teacherId || null,
+      specialization: r.specialization || null,
+      qualification: r.qualification || null,
+      password: r.password || null,
+      anomalies: r.anomalies,
+    }))
 
     startTransition(async () => {
-      const res = await bulkUploadTeachers(parsedData)
-      if (res.error) {
+      const res = await bulkUploadTeachers(payload, {
+        skipDuplicates: true,
+      })
+
+      if ("error" in res && res.error) {
         toast.error(res.error)
         return
       }
 
-      toast.success(`Successfully onboarded ${res.count} teachers! (${res.totalProcessed} processed)`)
-      handleClear()
+      if (res.success) {
+        setUploadStats({ count: res.count, skipped: res.skippedCount })
+        setCompletedCredentials(res.credentials)
+        toast.success(
+          `Onboarding Complete: ${res.count} teachers enrolled! (${res.skippedCount} duplicates safely skipped)`
+        )
+      }
     })
   }
 
+  const downloadCredentials = () => {
+    if (!completedCredentials || completedCredentials.length === 0) return
+    const csvContent = generateCredentialsCSV(completedCredentials, "TEACHER")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `teacher_credentials_${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success("Teacher credentials CSV downloaded.")
+  }
+
   return (
-    <div className="w-full max-w-3xl bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+    <div className="w-full max-w-4xl bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
         <div>
-          <h3 className="text-lg font-bold tracking-tight text-slate-900">CSV Teacher Onboarding Engine</h3>
-          <p className="text-xs text-slate-500">Bulk upload teachers with custom Unique IDs, Specialization, and Qualifications.</p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-bold tracking-tight text-slate-900">Teacher CSV Onboarding Engine</h3>
+            <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+              V2 Resilient
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Bulk upload faculty with automatic Teacher Unique IDs, department mapping, and secure credentials.
+          </p>
         </div>
         <a
           href="data:text/csv;charset=utf-8,TeacherUniqueID,Name,Email,Specialization,Qualification,Password%0ATCH-1001,Alice%20Smith,alice@school.edu,Mathematics,M.Sc.%20Ed,Teacher@123%0ATCH-1002,Robert%20Brown,robert@school.edu,Physics,Ph.D.%20Physics,Teacher@123"
@@ -135,95 +337,399 @@ export function TeacherCsvUploader() {
         </a>
       </div>
 
-      {/* File Dropzone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer bg-slate-50/70 hover:bg-slate-50 ${
-          isDragging ? "border-blue-500 bg-blue-50/50" : "border-slate-300"
-        }`}
-      >
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
+      {/* Upload Zone */}
+      {!fileName && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer bg-slate-50/70 hover:bg-slate-50 ${
+            isDragging ? "border-purple-500 bg-purple-50/50" : "border-slate-300"
+          }`}
+        >
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
 
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="p-3 bg-white rounded-full border border-slate-200 shadow-sm">
-            <Upload className="h-6 w-6 text-slate-600" />
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="p-4 bg-white rounded-full border border-slate-200 shadow-sm text-purple-600">
+              <Upload className="h-8 w-8" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                Click to upload teacher CSV <span className="font-normal text-slate-500">or drag and drop</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Supported columns: <span className="font-mono text-slate-700 font-semibold">TeacherUniqueID, Name, Email, Specialization, Qualification, Password</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800">
-              Click to upload <span className="font-normal text-slate-500">or drag and drop</span>
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Supported Columns: <span className="font-mono text-slate-700 font-semibold">TeacherUniqueID / StaffID, Name, Email, Specialization, Qualification, Password</span>
+        </div>
+      )}
+
+      {/* Completion Banner */}
+      {completedCredentials && uploadStats && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-emerald-950 text-base">Teacher Onboarding Successfully Executed!</h4>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  <span className="font-bold">{uploadStats.count}</span> faculty members enrolled into {onboardingMeta?.schoolName}.{" "}
+                  {uploadStats.skipped > 0 && <span>({uploadStats.skipped} duplicates safely skipped)</span>}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClear}
+              className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+            >
+              Upload Another CSV
+            </Button>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+            <Button
+              onClick={downloadCredentials}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-2 shadow-sm"
+            >
+              <Download className="h-4 w-4" />
+              Download Teacher Credentials (CSV)
+            </Button>
+            <p className="text-[11px] text-emerald-700">
+              Contains Teacher IDs, emails, temporary passwords, and departments.
             </p>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Parsed Preview Section */}
-      {fileName && parsedData.length > 0 && (
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between bg-slate-100/80 px-4 py-3 rounded-lg border border-slate-200">
+      {/* Active File Preview & Anomaly Dashboard */}
+      {fileName && !completedCredentials && (
+        <div className="space-y-5">
+          {/* File bar */}
+          <div className="flex items-center justify-between bg-slate-100/90 px-4 py-3 rounded-lg border border-slate-200">
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-blue-600" />
+              <FileText className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="text-xs font-bold text-slate-800">{fileName}</p>
-                <p className="text-[11px] text-slate-500">{parsedData.length} valid teacher rows ready for batch insertion</p>
+                <p className="text-[11px] text-slate-500">{totalCount} total teacher rows parsed &bull; 100% ingested</p>
               </div>
             </div>
             <button
               onClick={handleClear}
               className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
+              title="Remove file"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Data Density Preview Table */}
-          <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-semibold text-slate-600 flex items-center justify-between">
-              <span>Previewing First {Math.min(parsedData.length, 5)} Teacher Records</span>
-              <span className="text-[11px] font-normal text-slate-400">Teacher IDs Validated</span>
+          {/* Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-[11px] font-medium text-slate-500">Total Teachers</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{totalCount}</p>
             </div>
-            <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto text-xs">
-              {parsedData.slice(0, 5).map((row, i) => (
-                <div key={i} className="px-4 py-2 flex items-center justify-between text-slate-700 gap-2">
-                  <div className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                    {row.teacherId ? row.teacherId : `TCH-AUTO-${i + 1}`}
-                  </div>
-                  <div className="font-medium truncate max-w-[150px]">{row.name}</div>
-                  <div className="text-slate-500 font-mono truncate max-w-[180px]">{row.email}</div>
-                  <div className="text-slate-600 font-medium bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                    {row.specialization || "General Faculty"}
-                  </div>
-                </div>
-              ))}
+            <div className="p-3.5 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-[11px] font-medium text-emerald-700">Ready / Valid</p>
+              <p className="text-xl font-bold text-emerald-900 mt-1">{readyCount}</p>
+            </div>
+            <div
+              onClick={() => setFilterMode("ANOMALIES")}
+              className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
+                anomalyCount > 0
+                  ? "bg-amber-50 border-amber-300 hover:bg-amber-100/60"
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-amber-800">Anomalies</p>
+                {anomalyCount > 0 && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+              </div>
+              <p className="text-xl font-bold text-amber-900 mt-1">{anomalyCount}</p>
+            </div>
+            <div
+              onClick={() => setFilterMode("DUPLICATES")}
+              className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
+                duplicateCount > 0
+                  ? "bg-purple-50 border-purple-300 hover:bg-purple-100/60"
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <p className="text-[11px] font-semibold text-purple-800">Duplicates</p>
+              <p className="text-xl font-bold text-purple-900 mt-1">{duplicateCount}</p>
             </div>
           </div>
 
-          <button
-            onClick={handleUpload}
-            disabled={isPending}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Processing Bulk Teacher Onboarding...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                <span>Onboard {parsedData.length} Teachers</span>
-              </>
-            )}
-          </button>
+          {/* Action Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                onClick={() => setFilterMode("ALL")}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                  filterMode === "ALL"
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                All Faculty ({totalCount})
+              </button>
+              <button
+                onClick={() => setFilterMode("ANOMALIES")}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 ${
+                  filterMode === "ANOMALIES"
+                    ? "bg-amber-600 text-white"
+                    : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                <AlertTriangle className="h-3 w-3" />
+                Show Only Anomalies ({anomalyCount})
+              </button>
+              {duplicateCount > 0 && (
+                <button
+                  onClick={() => setFilterMode("DUPLICATES")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                    filterMode === "DUPLICATES"
+                      ? "bg-purple-700 text-white"
+                      : "bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100"
+                  }`}
+                >
+                  Duplicates ({duplicateCount})
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-full sm:w-48">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Search teachers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-xs bg-slate-50"
+                />
+              </div>
+              {anomalyCount > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleAutoResolveAll}
+                  className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 shrink-0"
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  Auto-Resolve All
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Table Preview */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-semibold text-slate-600">
+              Showing {displayedRows.length} of {totalCount} records
+            </div>
+
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 text-xs">
+              {displayedRows.length === 0 ? (
+                <div className="p-8 text-center text-slate-400">No records found matching current filter.</div>
+              ) : (
+                displayedRows.map((row) => (
+                  <div
+                    key={row.rowId}
+                    className={`px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors ${
+                      row.status === "ANOMALY" ? "bg-amber-50/30" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-[11px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 shrink-0">
+                        {row.teacherId || "NO-ID"}
+                      </span>
+                      <div className="truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{row.name || "Unnamed"}</span>
+                          {row.isAutoResolved && (
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-medium">
+                              Auto-Fixed
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {row.email || "no-email@missing"} &bull; {row.specialization || "General"} &bull;{" "}
+                          {row.qualification || "B.Ed."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {row.status === "DUPLICATE_DB" && (
+                        <span className="bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                          Already Uploaded
+                        </span>
+                      )}
+                      {row.status === "DUPLICATE_CSV" && (
+                        <span className="bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                          Duplicate in CSV
+                        </span>
+                      )}
+                      {row.anomalies.includes("MISSING_EMAIL") && (
+                        <span className="bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                          Missing Email
+                        </span>
+                      )}
+                      {row.anomalies.includes("INVALID_EMAIL") && (
+                        <span className="bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                          Invalid Email
+                        </span>
+                      )}
+
+                      {(row.status === "ANOMALY" || row.status === "DUPLICATE_CSV" || row.status === "DUPLICATE_DB") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openFixModal(row)}
+                          className="h-7 px-2 text-[11px] font-semibold text-purple-700 border-purple-200 hover:bg-purple-50 gap-1"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          Fix
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Upload Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 pt-4 gap-3">
+            <p className="text-xs text-slate-500">
+              <span className="font-semibold text-slate-800">{readyCount}</span> teachers ready to be onboarded.
+            </p>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClear}
+                disabled={isPending}
+                className="w-full sm:w-auto text-xs"
+              >
+                Clear
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={isPending || readyCount === 0}
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs gap-2 shadow-sm"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Onboarding Teachers in Batches...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Upload &amp; Enroll {readyCount} Teachers
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Edit Row Modal */}
+      {editingRow && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h4 className="font-bold text-slate-900 text-sm">Fix Teacher Details</h4>
+                <p className="text-[11px] text-slate-500">Resolve anomalies for row: {editingRow.rowId}</p>
+              </div>
+              <button onClick={() => setEditingRow(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Teacher Name</label>
+                <Input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="e.g. Dr. Robert Smith"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Email</label>
+                <Input
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  placeholder="e.g. robert@faculty.school.edu"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Teacher Unique ID</label>
+                  <Input
+                    value={editForm.teacherId}
+                    onChange={(e) => setEditForm({ ...editForm, teacherId: e.target.value })}
+                    placeholder="e.g. TCH-1001"
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Specialization</label>
+                  <Input
+                    value={editForm.specialization}
+                    onChange={(e) => setEditForm({ ...editForm, specialization: e.target.value })}
+                    placeholder="e.g. Mathematics"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Qualification</label>
+                <Input
+                  value={editForm.qualification}
+                  onChange={(e) => setEditForm({ ...editForm, qualification: e.target.value })}
+                  placeholder="e.g. M.Sc. Mathematics, B.Ed."
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Temporary Password</label>
+                <Input
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  placeholder="Leave blank for auto-generated password"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setEditingRow(null)} className="text-xs">
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveFix} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                Save &amp; Resolve
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

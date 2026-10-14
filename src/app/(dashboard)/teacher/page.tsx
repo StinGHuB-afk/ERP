@@ -114,7 +114,7 @@ export default async function TeacherDashboard() {
                 </TableCell>
               </TableRow>
             ) : (
-              teacher.timetablePeriods.map((period: any) => (
+              teacher.timetablePeriods.map((period) => (
                 <TableRow key={period.id}>
                   <TableCell className="font-medium">
                     {period.startTime} - {period.endTime}

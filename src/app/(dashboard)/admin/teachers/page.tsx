@@ -91,7 +91,7 @@ export default async function AdminTeachersPage(
             data={exportData as Record<string, unknown>[]}
             filename="Teachers_Export"
             columns={exportColumns}
-            fetchAllAction={exportAllTeachers.bind(null) as any}
+            fetchAllAction={exportAllTeachers}
             label="Export All Teachers"
           />
           <Dialog>
@@ -108,7 +108,7 @@ export default async function AdminTeachersPage(
                 </Button>
               }
             />
-            <DialogContent className="max-w-3xl p-6 bg-white rounded-xl">
+            <DialogContent className="max-w-4xl p-6 bg-white rounded-xl">
               <DialogHeader>
                 <DialogTitle className="sr-only">CSV Teacher Onboarding</DialogTitle>
               </DialogHeader>

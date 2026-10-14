@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { reviewRiskFlag } from "@/app/actions/at-risk"
 import { AlertTriangle, ShieldAlert, CheckCircle2, XCircle, Clock, UserCheck, FileText, Filter, Info } from "lucide-react"
 
-interface RiskFlagItem {
+export interface RiskFlagItem {
   id: string
   studentId: string
   classId: string
@@ -173,7 +173,7 @@ export default function AtRiskDashboardClient({ initialFlags }: { initialFlags: 
                         <span className="font-semibold text-slate-700 flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-emerald-600" /> Staff Review Note</span>
                         <span className="text-[10px]">By: {flag.reviewedBy?.name || "Staff"}</span>
                       </div>
-                      <p className="text-slate-600 italic">"{flag.reviewNote}"</p>
+                      <p className="text-slate-600 italic">&ldquo;{flag.reviewNote}&rdquo;</p>
                     </div>
                   )}
                 </div>

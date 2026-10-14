@@ -53,7 +53,7 @@ export function SettingsForm({ initialData, activeSessionName }: SettingsFormPro
           <Input id="schoolAddress" name="schoolAddress" defaultValue={initialData.schoolAddress} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="principalName">Principal's Name</Label>
+          <Label htmlFor="principalName">Principal&apos;s Name</Label>
           <Input id="principalName" name="principalName" defaultValue={initialData.principalName} required />
         </div>
         <div className="space-y-2">

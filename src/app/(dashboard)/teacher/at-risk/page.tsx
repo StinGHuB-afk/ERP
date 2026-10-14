@@ -1,7 +1,7 @@
 import { verifySession } from "@/lib/auth/session"
 import { redirect } from "next/navigation"
 import { getAtRiskStudentsForTeacher } from "@/app/actions/at-risk"
-import AtRiskDashboardClient from "./AtRiskDashboardClient"
+import AtRiskDashboardClient, { RiskFlagItem } from "./AtRiskDashboardClient"
 import { AlertTriangle } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -31,7 +31,7 @@ export default async function AtRiskTeacherPage() {
 
   return (
     <AtRiskDashboardClient
-      initialFlags={response.flags as any[]}
+      initialFlags={response.flags as unknown as RiskFlagItem[]}
       targetClassId={response.targetClassId}
     />
   )

@@ -2,9 +2,9 @@ import { Role } from "@prisma/client"
 import { getSupportTickets, getTeachersForSupport } from "@/app/actions/support.actions"
 import { FaqAccordion, FaqItem } from "@/components/help/FaqAccordion"
 import { SupportTicketForm } from "@/components/help/SupportTicketForm"
-import { SupportTicketList } from "@/components/help/SupportTicketList"
+import { SupportTicketList, TicketItem } from "@/components/help/SupportTicketList"
 import { ContactCards } from "@/components/help/ContactCards"
-import { GraduationCap, Send, MessageSquare, BookOpen, HelpCircle } from "lucide-react"
+import { GraduationCap } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const STUDENT_FAQS: FaqItem[] = [
@@ -102,7 +102,7 @@ export default async function StudentHelpPage() {
 
         <TabsContent value="mytickets" className="space-y-4">
           <SupportTicketList
-            tickets={mySubmittedTickets as any}
+            tickets={mySubmittedTickets as unknown as TicketItem[]}
             scope="mine"
             canReply={false}
             title="My Academic Doubts & Support Tickets"

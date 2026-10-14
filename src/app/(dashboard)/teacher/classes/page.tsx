@@ -3,6 +3,16 @@ import { verifySession } from "@/lib/auth/session"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getClassTeacherClassIds, getSubjectTeacherClassIds } from "@/lib/auth/teacher-authorization"
 
+import { Prisma } from "@prisma/client"
+
+type ClassWithStudentsAndUsers = Prisma.ClassGetPayload<{
+  include: {
+    students: {
+      include: { user: true }
+    }
+  }
+}>
+
 export default async function TeacherClassesPage() {
   const session = await verifySession()
   if (!session?.userId) return <div>Unauthorized</div>
@@ -17,7 +27,7 @@ export default async function TeacherClassesPage() {
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "default" } })
   const activeSessionId = settings?.activeSessionId
 
-  let classes: any[] = [];
+  let classes: ClassWithStudentsAndUsers[] = [];
   if (activeSessionId) {
     const classTeacherClassIds = await getClassTeacherClassIds(teacherUser.teacher.id, activeSessionId);
     const subjectTeacherClassIds = await getSubjectTeacherClassIds(teacherUser.teacher.id, activeSessionId);
@@ -72,7 +82,7 @@ export default async function TeacherClassesPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  (Array.isArray(cls.students) ? cls.students : []).map((student: any) => (
+                  (Array.isArray(cls.students) ? cls.students : []).map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.user.name || "Unknown Student"}</TableCell>
                       <TableCell>{student.user.email}</TableCell>

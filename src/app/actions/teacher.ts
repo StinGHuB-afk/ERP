@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { markSchema, classRosterQuerySchema } from "@/lib/validations"
 import { verifySession } from "@/lib/auth/session"
@@ -38,7 +39,7 @@ export async function getPaginatedMarks(page = 1, limit = 10, subjectId?: string
   if (!teacherId) return { error: "Teacher profile not found", data: [], total: 0 }
 
   const activeSessionId = await requireActiveSessionId()
-  const where: any = {
+  const where: Prisma.MarkWhereInput = {
     teacherId,
     academicSessionId: activeSessionId,
     ...(subjectId && subjectId !== "all" ? { subjectId } : {}),

@@ -16,8 +16,20 @@ import {
   Clock,
   AlertCircle,
   HeartPulse,
-  Activity,
 } from "lucide-react"
+
+type ChildAttendanceData = Awaited<ReturnType<typeof getChildAttendance>>
+type ChildResultsData = Awaited<ReturnType<typeof getChildResults>>
+
+interface HealthRecordData {
+  bloodGroup?: string | null
+  allergies?: string | null
+  dailyMedications?: string | null
+  doctorName?: string | null
+  doctorPhone?: string | null
+  chronicConditions?: string | null
+  emergencyMedicalProtocol?: string | null
+}
 
 interface LinkedChild {
   studentId: string
@@ -27,7 +39,7 @@ interface LinkedChild {
   className: string
   relationship: string
   isPrimaryContact: boolean
-  healthRecord?: any
+  healthRecord?: HealthRecordData | null
 }
 
 interface ParentDashboardClientProps {
@@ -38,8 +50,8 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
   const [selectedChild, setSelectedChild] = useState<LinkedChild | null>(
     childrenList.length > 0 ? childrenList[0] : null
   )
-  const [attendanceData, setAttendanceData] = useState<any>(null)
-  const [resultsData, setResultsData] = useState<any>(null)
+  const [attendanceData, setAttendanceData] = useState<ChildAttendanceData | null>(null)
+  const [resultsData, setResultsData] = useState<ChildResultsData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<"ATTENDANCE" | "RESULTS" | "HEALTH">("ATTENDANCE")
 
@@ -265,7 +277,7 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-800">
-                    {attendanceData?.records?.map((record: any) => (
+                    {attendanceData && "records" in attendanceData && attendanceData.records?.map((record) => (
                       <tr key={record.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="p-3 font-mono font-medium">
                           {new Date(record.date).toLocaleDateString("en-US", {
@@ -362,7 +374,7 @@ export default function ParentDashboardClient({ childrenList }: ParentDashboardC
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-800">
-                    {resultsData?.marks?.map((mark: any) => (
+                    {resultsData && "marks" in resultsData && resultsData.marks?.map((mark) => (
                       <tr key={mark.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="p-3 font-semibold text-slate-900">{mark.subjectName}</td>
                         <td className="p-3 font-mono text-slate-500">{mark.subjectCode}</td>

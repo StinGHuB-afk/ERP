@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { getClassTeacherAssignments } from "@/lib/auth/teacher-authorization"
-import { TeacherAttendanceTable } from "@/components/dashboard/teacher-attendance-table"
+import { TeacherAttendanceTable, ClassWithStudents } from "@/components/dashboard/teacher-attendance-table"
 import { AttendanceHeatmap } from "@/components/dashboard/attendance-heatmap"
 import { CalendarDays } from "lucide-react"
 
@@ -100,7 +100,7 @@ export default async function TeacherAttendancePage(
         classesWithStudents.map((cls) => (
           <TeacherAttendanceTable 
             key={cls.id} 
-            classData={cls as any} 
+            classData={cls as unknown as ClassWithStudents} 
             selectedDate={selectedDateStr} 
             activeSessionId={activeSessionId}
           />

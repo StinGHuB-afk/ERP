@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { upsertHealthRecord } from "@/app/actions/enterprise"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { HeartPulse, CheckCircle2, AlertCircle, Loader2, Edit3 } from "lucide-react"
 

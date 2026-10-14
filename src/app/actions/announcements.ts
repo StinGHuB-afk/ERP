@@ -56,7 +56,7 @@ export async function deleteAnnouncement(id: string) {
     await logActivity("ANNOUNCEMENT_DELETED", "Announcement", id, null, session.userId)
     revalidatePath("/")
     return { success: true }
-  } catch (err) {
+  } catch (_err) {
     return { error: "Failed to delete announcement" }
   }
 }

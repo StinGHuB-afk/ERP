@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ProfileRequestActions } from "./profile-request-actions"
-import { UserCheck, Clock, CheckCircle2, ShieldAlert, FileEdit, ExternalLink } from "lucide-react"
+import { UserCheck, Clock, CheckCircle2, ShieldAlert, ExternalLink } from "lucide-react"
 import { RequestedProfileData } from "@/types/enterprise"
 
 export default async function TeacherProfileRequestsPage() {

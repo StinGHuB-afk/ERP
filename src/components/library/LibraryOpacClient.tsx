@@ -5,10 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
 
-export function LibraryOpacClient({ books, myBorrowRecords }: any) {
+export interface OpacBook {
+  id: string
+  title: string
+  author: string
+  isbn?: string | null
+  rackNumber?: string | null
+  availableCopies: number
+}
+
+export interface OpacBorrowRecord {
+  id: string
+  borrowedAt: Date | string
+  dueDate: Date | string
+  status: string
+  book: {
+    title: string
+  }
+}
+
+interface LibraryOpacClientProps {
+  books: OpacBook[]
+  myBorrowRecords: OpacBorrowRecord[]
+}
+
+export function LibraryOpacClient({ books, myBorrowRecords }: LibraryOpacClientProps) {
   const [search, setSearch] = useState("")
 
-  const filteredBooks = books.filter((b: any) => 
+  const filteredBooks = books.filter((b) => 
     b.title.toLowerCase().includes(search.toLowerCase()) || 
     b.author.toLowerCase().includes(search.toLowerCase())
   )
@@ -33,7 +57,7 @@ export function LibraryOpacClient({ books, myBorrowRecords }: any) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredBooks.map((b: any) => (
+            {filteredBooks.map((b) => (
               <div key={b.id} className="border rounded-lg p-4 flex flex-col justify-between">
                 <div>
                   <h3 className="font-semibold text-lg line-clamp-1" title={b.title}>{b.title}</h3>
@@ -70,7 +94,7 @@ export function LibraryOpacClient({ books, myBorrowRecords }: any) {
                 </tr>
               </thead>
               <tbody>
-                {myBorrowRecords.map((r: any) => (
+                {myBorrowRecords.map((r) => (
                   <tr key={r.id} className="border-t">
                     <td className="p-3 font-medium">{r.book.title}</td>
                     <td className="p-3">{new Date(r.borrowedAt).toLocaleDateString()}</td>

@@ -13,7 +13,7 @@ import { TenantSwitcher } from "./tenant-switcher"
 export function Header({
   userName,
   role,
-  academicSession,
+  academicSession: _academicSession,
   sessions,
   currentSessionId,
   schoolName,

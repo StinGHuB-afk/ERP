@@ -2,9 +2,9 @@ import { Role } from "@prisma/client"
 import { getSupportTickets, getTeachersForSupport } from "@/app/actions/support.actions"
 import { FaqAccordion, FaqItem } from "@/components/help/FaqAccordion"
 import { SupportTicketForm } from "@/components/help/SupportTicketForm"
-import { SupportTicketList } from "@/components/help/SupportTicketList"
+import { SupportTicketList, TicketItem } from "@/components/help/SupportTicketList"
 import { ContactCards } from "@/components/help/ContactCards"
-import { Users, Send, MessageSquare, BookOpen, HeartHandshake } from "lucide-react"
+import { HeartHandshake } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const PARENT_FAQS: FaqItem[] = [
@@ -62,7 +62,7 @@ export default async function ParentHelpPage() {
             Parent Support & Inquiry Desk
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Direct channel to communicate with Class Teachers and School Administration regarding your child's academics and school services.
+            Direct channel to communicate with Class Teachers and School Administration regarding your child&apos;s academics and school services.
           </p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default async function ParentHelpPage() {
 
         <TabsContent value="mytickets" className="space-y-4">
           <SupportTicketList
-            tickets={mySubmittedTickets as any}
+            tickets={mySubmittedTickets as unknown as TicketItem[]}
             scope="mine"
             canReply={false}
             title="My Submitted Inquiries & Responses"

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         userId: session.userId,
         clientIp,
         resource: "/api/teacher/class-roster",
-        details: parseResult.error.issues.map((i: any) => i.message).join("; "),
+        details: parseResult.error.issues.map((i) => i.message).join("; "),
       })
       // Generic 400 Bad Request error response
       return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 })
@@ -120,12 +120,12 @@ export async function GET(request: NextRequest) {
     }))
 
     return NextResponse.json({ success: true, roster }, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     logSecurityEvent({
       event: "VALIDATION_FAILURE",
       clientIp,
       resource: "/api/teacher/class-roster",
-      details: error?.message || "Unhandled server exception",
+      details: error instanceof Error ? error.message : "Unhandled server exception",
     })
     return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 })
   }

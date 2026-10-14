@@ -30,7 +30,7 @@ import {
 export const dynamic = "force-dynamic"
 
 export default async function AdminOperationsPage() {
-  const session = await verifySession()
+  const _session = await verifySession()
 
   const modules = await getTenantModules()
   if (!modules["ASSETS"]) {

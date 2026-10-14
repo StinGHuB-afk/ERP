@@ -14,7 +14,9 @@ async function resolveTenantContext(overrideSchoolId?: string) {
     throw new Error("Unauthorized")
   }
   const effectiveTenantId = await getEffectiveTenantId()
-  const schoolId = overrideSchoolId || effectiveTenantId || null
+  const schoolId = session.role === Role.SUPERADMIN
+    ? (overrideSchoolId || effectiveTenantId || null)
+    : (session.schoolId || effectiveTenantId || null)
 
   if (session.role !== Role.SUPERADMIN && !schoolId) {
     throw new Error("Orphaned account: No school association found.")
@@ -233,15 +235,21 @@ async function deleteEntity(model: "user" | "class" | "subject", id: string, pat
   const { session, schoolId } = await resolveTenantContext()
   if (session.role !== Role.ADMIN && session.role !== Role.SUPERADMIN) return { error: "Unauthorized" }
   try {
-    const item = await (prisma[model] as any).findUnique({ where: { id } })
-    if (!item) return { error: "Not found" }
-    
-    if (session.role !== Role.SUPERADMIN) {
-      if (model === "user" && item.schoolId !== schoolId) return { error: "Unauthorized" }
-      if (model === "class" && item.schoolId !== schoolId) return { error: "Unauthorized" }
+    if (model === "user") {
+      const item = await prisma.user.findUnique({ where: { id } })
+      if (!item) return { error: "Not found" }
+      if (session.role !== Role.SUPERADMIN && item.schoolId !== schoolId) return { error: "Unauthorized" }
+      await prisma.user.delete({ where: { id } })
+    } else if (model === "class") {
+      const item = await prisma.class.findUnique({ where: { id } })
+      if (!item) return { error: "Not found" }
+      if (session.role !== Role.SUPERADMIN && item.schoolId !== schoolId) return { error: "Unauthorized" }
+      await prisma.class.delete({ where: { id } })
+    } else if (model === "subject") {
+      const item = await prisma.subject.findUnique({ where: { id } })
+      if (!item) return { error: "Not found" }
+      await prisma.subject.delete({ where: { id } })
     }
-
-    await (prisma[model] as any).delete({ where: { id } })
     revalidatePath(path)
     return { success: true }
   } catch {
@@ -373,8 +381,9 @@ export async function transferStudent(studentId: string, newClassId: string) {
 
     revalidatePath("/admin/students")
     return { success: true }
-  } catch (error: any) {
-    return { error: error.message || "Failed to transfer student." }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Failed to transfer student."
+    return { error: msg }
   }
 }
 

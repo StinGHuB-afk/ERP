@@ -1,7 +1,6 @@
-import { Role, TicketStatus } from "@prisma/client"
 import { getSupportTickets, getSupportOverviewStats } from "@/app/actions/support.actions"
 import { FaqAccordion, FaqItem } from "@/components/help/FaqAccordion"
-import { SupportTicketList } from "@/components/help/SupportTicketList"
+import { SupportTicketList, TicketItem } from "@/components/help/SupportTicketList"
 import { ContactCards } from "@/components/help/ContactCards"
 import { Shield, Building2, Server, Lock, HelpCircle } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -121,7 +120,7 @@ export default async function SuperadminHelpPage() {
 
         <TabsContent value="incoming" className="space-y-4">
           <SupportTicketList
-            tickets={incomingEscalations as any}
+            tickets={incomingEscalations as unknown as TicketItem[]}
             scope="incoming"
             canReply={true}
             title="School Admin Ticket Escalations Desk"

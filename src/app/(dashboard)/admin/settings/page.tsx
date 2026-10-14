@@ -34,7 +34,7 @@ export default async function AdminSettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Institutional Settings</h1>
-          <p className="text-slate-500 text-sm">Manage your school's global branding and academic configuration.</p>
+          <p className="text-slate-500 text-sm">Manage your school&apos;s global branding and academic configuration.</p>
         </div>
       </div>
 

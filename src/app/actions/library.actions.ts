@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { verifySession, getEffectiveTenantId } from "@/lib/auth/session";
 import { enforceModuleAccess } from "@/app/actions/entitlements.actions";
@@ -16,7 +17,7 @@ async function verifyLibraryAccess() {
   }
 
   // Assuming effectiveTenantId can be retrieved if needed, but we'll extract it from the user's schoolId for simplicity if not provided
-  let schoolId = session.schoolId;
+  const schoolId = session.schoolId;
   
   // If we had a getEffectiveTenantId() method in session.ts we'd use it, 
   // but fallback to session.schoolId if not.
@@ -50,7 +51,7 @@ export async function getBorrowRecords(schoolId: string, userId?: string) {
       userId = session.userId;
     }
 
-    const where: any = { schoolId };
+    const where: Prisma.BorrowRecordWhereInput = { schoolId };
     if (userId) {
       where.userId = userId;
     }
@@ -129,9 +130,9 @@ export async function upsertBook(formData: FormData) {
     revalidatePath("/admin/library");
     revalidatePath("/librarian/catalog");
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to upsert book:", error);
-    return { error: error.message };
+    return { error: error instanceof Error ? error.message : "Failed to upsert book." };
   }
 }
 
@@ -148,6 +149,20 @@ export async function borrowBook(bookId: string, userId: string, schoolId: strin
     }
     await enforceModuleAccess("LIBRARY");
 
+    if (session.role !== "SUPERADMIN" && schoolId !== tenantId) {
+      throw new Error("Unauthorized: School ID mismatch with active tenant.");
+    }
+
+    const parsedDueDate = new Date(dueDate);
+    if (isNaN(parsedDueDate.getTime())) {
+      throw new Error("Invalid due date format.");
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (parsedDueDate < today) {
+      throw new Error("Due date cannot be set in the past.");
+    }
+
     return await prisma.$transaction(async (tx) => {
       const book = await tx.book.findUnique({ where: { id: bookId } });
       if (!book) throw new Error("Book not found");
@@ -157,6 +172,13 @@ export async function borrowBook(bookId: string, userId: string, schoolId: strin
       const targetUser = await tx.user.findUnique({ where: { id: userId } });
       if (!targetUser) throw new Error("User not found");
       if (targetUser.schoolId !== schoolId) throw new Error("User does not belong to this school");
+
+      const alreadyBorrowed = await tx.borrowRecord.findFirst({
+        where: { bookId, userId, status: "BORROWED" }
+      });
+      if (alreadyBorrowed) {
+        throw new Error("User already has an active borrowed copy of this book.");
+      }
 
       // Decrement available copies
       await tx.book.update({
@@ -177,9 +199,9 @@ export async function borrowBook(bookId: string, userId: string, schoolId: strin
 
       return record;
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to borrow book:", error);
-    return { error: error.message };
+    return { error: error instanceof Error ? error.message : "Failed to borrow book." };
   } finally {
     revalidatePath("/admin/library");
     revalidatePath("/librarian/circulation");
@@ -202,6 +224,9 @@ export async function returnBook(borrowRecordId: string, isLost: boolean = false
     return await prisma.$transaction(async (tx) => {
       const record = await tx.borrowRecord.findUnique({ where: { id: borrowRecordId } });
       if (!record) throw new Error("Borrow record not found");
+      if (session.role !== "SUPERADMIN" && record.schoolId !== tenantId) {
+        throw new Error("Unauthorized: Borrow record belongs to another school tenant.");
+      }
       if (record.status !== "BORROWED") throw new Error("Book is not currently borrowed");
 
       const status = isLost ? "LOST" : "RETURNED";
@@ -226,9 +251,9 @@ export async function returnBook(borrowRecordId: string, isLost: boolean = false
 
       return updatedRecord;
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to return book:", error);
-    return { error: error.message };
+    return { error: error instanceof Error ? error.message : "Failed to return book." };
   } finally {
     revalidatePath("/admin/library");
     revalidatePath("/librarian/circulation");
@@ -325,9 +350,9 @@ export async function sendLibraryOverdueAlerts(schoolId: string, finePerDay: num
       count: alertsCount,
       message: `Successfully dispatched ${alertsCount} library due/overdue alerts with fine policy details!`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to dispatch library overdue alerts:", error);
-    return { error: error.message || "Failed to dispatch library alerts." };
+    return { error: error instanceof Error ? error.message : "Failed to dispatch library alerts." };
   }
 }
 

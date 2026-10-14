@@ -86,7 +86,7 @@ export async function getAtRiskStudentsForTeacher(classId?: string) {
   const activeSessionId = await resolveActiveSessionId()
   if (!activeSessionId) return { error: "No active academic session found." }
 
-  let targetClassId = classId || (session.role === "TEACHER" ? await resolveTeacherClassId(session.userId, activeSessionId) : null)
+  const targetClassId = classId || (session.role === "TEACHER" ? await resolveTeacherClassId(session.userId, activeSessionId) : null)
 
   if (!targetClassId) {
     if (session.role === "ADMIN" || session.role === "SUPERADMIN") {

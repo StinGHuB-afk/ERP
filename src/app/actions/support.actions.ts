@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { Role, TicketPriority, TicketStatus } from "@prisma/client"
+import { Prisma, Role, TicketPriority, TicketStatus } from "@prisma/client"
 import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 
 async function resolveTenantContext() {
@@ -82,7 +82,7 @@ export async function getSupportTickets(filters?: {
   const { session, schoolId } = await resolveTenantContext()
   const scope = filters?.scope || "mine"
 
-  let whereClause: any = {}
+  let whereClause: Prisma.SupportTicketWhereInput = {}
 
   if (scope === "mine") {
     whereClause = { senderId: session.userId }
@@ -222,7 +222,7 @@ export async function respondToSupportTicket(
 export async function getSupportOverviewStats() {
   const { session, schoolId } = await resolveTenantContext()
 
-  let baseWhere: any = {}
+  let baseWhere: Prisma.SupportTicketWhereInput = {}
   if (session.role === Role.SUPERADMIN && !schoolId) {
     baseWhere = {}
   } else if (schoolId) {
@@ -242,7 +242,7 @@ export async function getSupportOverviewStats() {
 }
 
 export async function getTeachersForSupport() {
-  const { session, schoolId } = await resolveTenantContext()
+  const { schoolId } = await resolveTenantContext()
   if (!schoolId) return []
 
   const teachers = await prisma.teacher.findMany({

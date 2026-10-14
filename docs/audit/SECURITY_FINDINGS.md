@@ -13,7 +13,7 @@
 - Actual behavior: Deletes user across tenant boundary without isolation check.
 - Root cause: Missing tenant boundary validation (`resolveTenantContext` or `userExists.schoolId !== caller.schoolId`).
 - Proposed remediation: Fetch caller's tenant context via `getEffectiveTenantId()` / `session.schoolId` and verify `userExists.schoolId === caller.schoolId` unless caller is SUPERADMIN.
-- Defect lifecycle status: OPEN
+- Defect lifecycle status: FIXED-VERIFIED (remediated in REM-001, commit c222ec8)
 
 ### F-002 - Missing Tenant Isolation in Substitute Teacher Assignment (`assignSubstitute`)
 - Type: Confirmed defect
@@ -28,7 +28,7 @@
 - Actual behavior: Any Admin can cross-assign teachers and classes across different schools.
 - Root cause: Missing tenant verification check on `teacher` and `targetClass`.
 - Proposed remediation: Enforce tenant match check on `teacher.user.schoolId` and `targetClass.schoolId`.
-- Defect lifecycle status: OPEN
+- Defect lifecycle status: FIXED-VERIFIED (remediated in REM-002, commit c222ec8)
 
 ### F-003 - Unprotected Librarian Route in Edge Proxy (`src/proxy.ts`)
 - Type: Confirmed defect
@@ -42,7 +42,7 @@
 - Actual behavior: Unauthenticated requests bypass Edge proxy check (handled only later by page-level code).
 - Root cause: Missing `/librarian` entry in `isProtectedRoute` and `config.matcher`.
 - Proposed remediation: Add `/librarian` to `isProtectedRoute` and `config.matcher` in `src/proxy.ts`.
-- Defect lifecycle status: OPEN
+- Defect lifecycle status: FIXED-VERIFIED (remediated in REM-003, commit c222ec8)
 
 ### F-004 - ESLint Baseline Debt (274 Errors, 150 Warnings)
 - Type: Suspected

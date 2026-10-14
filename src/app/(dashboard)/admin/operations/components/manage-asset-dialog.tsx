@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { assignAsset, updateAssetStatus } from "@/app/actions/operations.actions"
-import { Settings2, Loader2, UserCheck, Wrench, AlertTriangle } from "lucide-react"
+import { Settings2, Loader2, UserCheck, Wrench } from "lucide-react"
 
 interface ManageAssetDialogProps {
   assetId: string

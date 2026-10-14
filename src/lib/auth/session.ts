@@ -22,7 +22,7 @@ export async function createSession(
   })
 }
 
-export async function verifySession(allowPasswordChangeState: boolean = false) {
+export async function verifySession(_allowPasswordChangeState: boolean = false) {
   try {
     const cookieStore = await cookies()
     const cookie = cookieStore.get("session")?.value
@@ -56,7 +56,7 @@ export async function verifySession(allowPasswordChangeState: boolean = false) {
       schoolId: user.schoolId,
       needsPasswordChange: user.mustChangePassword,
     }
-  } catch (error) {
+  } catch (_error) {
     return null
   }
 }
@@ -65,7 +65,7 @@ export async function deleteSession() {
   try {
     const cookieStore = await cookies()
     cookieStore.delete("session")
-  } catch (error) {
+  } catch (_error) {
     // Ignore error if cookies cannot be accessed
   }
 }

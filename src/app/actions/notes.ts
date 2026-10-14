@@ -131,30 +131,59 @@ export async function confirmFileUpload(data: { resourceId: string, type: 'PDF' 
 }
 
 export async function cancelFileUpload(data: { resourceId: string, type: 'PDF' | 'VIDEO' }) {
+  const session = await verifySession()
+  if (!session || (session.role !== 'TEACHER' && session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) {
+    throw new Error('Unauthorized')
+  }
+
   if (data.type === 'PDF') {
-    await prisma.learningPdf.delete({ where: { id: data.resourceId, status: ContentStatus.DRAFT } })
+    const pdf = await prisma.learningPdf.findUnique({
+      where: { id: data.resourceId, status: ContentStatus.DRAFT },
+      include: { topic: { include: { chapter: { select: { subjectId: true, classId: true } } } } }
+    })
+    if (!pdf) return { success: true }
+    if (session.role === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId }, select: { id: true } })
+      if (!teacher) throw new Error('Teacher record not found')
+      const activeSessionId = await requireActiveSessionId()
+      await assertTeacherCanManageContent(teacher.id, pdf.topic.chapter.subjectId, activeSessionId, pdf.topic.chapter.classId || undefined)
+    }
+    await prisma.learningPdf.delete({ where: { id: data.resourceId } })
   } else {
-    await prisma.learningVideo.delete({ where: { id: data.resourceId, status: ContentStatus.DRAFT } })
+    const video = await prisma.learningVideo.findUnique({
+      where: { id: data.resourceId, status: ContentStatus.DRAFT },
+      include: { topic: { include: { chapter: { select: { subjectId: true, classId: true } } } } }
+    })
+    if (!video) return { success: true }
+    if (session.role === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId }, select: { id: true } })
+      if (!teacher) throw new Error('Teacher record not found')
+      const activeSessionId = await requireActiveSessionId()
+      await assertTeacherCanManageContent(teacher.id, video.topic.chapter.subjectId, activeSessionId, video.topic.chapter.classId || undefined)
+    }
+    await prisma.learningVideo.delete({ where: { id: data.resourceId } })
   }
   return { success: true }
 }
 
-function validateExplanationAST(ast: any, currentDepth = 0): void {
+function validateExplanationAST(ast: unknown, currentDepth = 0): void {
   if (currentDepth > 5) throw new Error('Explanation AST exceeds maximum allowed nesting depth of 5')
   if (!Array.isArray(ast)) throw new Error('Explanation AST must be an array of nodes')
 
   for (const node of ast) {
-    if (!node.type || (node.type !== 'text' && node.type !== 'annotation')) throw new Error(`Invalid node type: ${node.type}`)
-    if (node.type === 'text' && typeof node.content !== 'string') throw new Error('Text node must contain string content')
-    if (node.type === 'annotation') {
-      if (typeof node.content !== 'string') throw new Error('Annotation node must have selected text')
-      if (!node.explanation) throw new Error('Annotation node must have an explanation')
-      validateExplanationAST(node.explanation, currentDepth + 1)
+    if (!node || typeof node !== 'object') throw new Error('Invalid node in explanation AST')
+    const item = node as Record<string, unknown>
+    if (!item.type || (item.type !== 'text' && item.type !== 'annotation')) throw new Error(`Invalid node type: ${String(item.type)}`)
+    if (item.type === 'text' && typeof item.content !== 'string') throw new Error('Text node must contain string content')
+    if (item.type === 'annotation') {
+      if (typeof item.content !== 'string') throw new Error('Annotation node must have selected text')
+      if (!item.explanation) throw new Error('Annotation node must have an explanation')
+      validateExplanationAST(item.explanation, currentDepth + 1)
     }
   }
 }
 
-export async function saveExplanation(data: { topicId: string, ast: any, status: ContentStatus, expectedSessionId: string }) {
+export async function saveExplanation(data: { topicId: string, ast: unknown, status: ContentStatus, expectedSessionId: string }) {
   const topic = await prisma.learningTopic.findUnique({ where: { id: data.topicId }, include: { chapter: { select: { subjectId: true, classId: true } } } })
   if (!topic) throw new Error('Topic not found')
 

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useTransition } from "react"
-import { useRouter } from "next/navigation"
 import {
   Select,
   SelectContent,
@@ -12,15 +11,16 @@ import {
 import { getTenantList, setSuperadminTenantContext } from "@/app/actions/tenant.actions"
 import { Building2 } from "lucide-react"
 
+type TenantSchool = Awaited<ReturnType<typeof getTenantList>>[number]
+
 interface TenantSwitcherProps {
   currentRole: string
   initialTenantId: string | null
 }
 
 export function TenantSwitcher({ currentRole, initialTenantId }: TenantSwitcherProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [schools, setSchools] = useState<{ id: string; name: string }[]>([])
+  const [schools, setSchools] = useState<TenantSchool[]>([])
   const [isLoadingSchools, setIsLoadingSchools] = useState(true)
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function TenantSwitcher({ currentRole, initialTenantId }: TenantSwitcherP
           <SelectItem value="global" className="text-xs font-medium cursor-pointer">
             <span className="truncate pr-6 block font-bold text-slate-800">Global Superadmin View</span>
           </SelectItem>
-          {schools.map((school: any) => (
+          {schools.map((school) => (
             <SelectItem key={school.id} value={school.id} className="text-xs font-medium cursor-pointer py-1.5">
               <div className="flex flex-col text-left">
                 <span className="font-bold text-slate-900">{school.name}</span>

@@ -23,8 +23,10 @@ export function PromotionEngine({ classes, activeSessionId }: { classes: Class[]
 
   useEffect(() => {
     if (!sourceClassId) {
-      setStudents([])
-      setSelectedStudents(new Set())
+      startTransition(() => {
+        setStudents([])
+        setSelectedStudents(new Set())
+      })
       return
     }
 
@@ -35,8 +37,8 @@ export function PromotionEngine({ classes, activeSessionId }: { classes: Class[]
         // Auto-select eligible students
         const eligibleIds = data.filter(s => s.eligibility === "ELIGIBLE").map(s => s.id)
         setSelectedStudents(new Set(eligibleIds))
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load eligibility data")
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to load eligibility data")
       }
     })
   }, [sourceClassId])
@@ -72,8 +74,8 @@ export function PromotionEngine({ classes, activeSessionId }: { classes: Class[]
         setDestClassId("")
         setIsConfirming(false)
         setConfirmText("")
-      } catch (err: any) {
-        toast.error(err.message || "Failed to promote students.")
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to promote students.")
       }
     })
   }
@@ -207,7 +209,7 @@ export function PromotionEngine({ classes, activeSessionId }: { classes: Class[]
               <ul className="list-disc pl-4 space-y-1 text-xs">
                 <li>Historical enrollment and marks are preserved in the current session.</li>
                 <li>A new StudentEnrollment is created for the next session.</li>
-                <li>The student's current class pointer is safely updated.</li>
+                <li>The student&apos;s current class pointer is safely updated.</li>
               </ul>
               {students.filter(s => s.eligibility !== "ELIGIBLE").length > 0 && (
                 <span className="flex items-center text-orange-600 mt-2 font-medium">

@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { verifySession } from "@/lib/auth/session"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { FileText, Calendar, ChevronRight, History } from "lucide-react"
 import Link from "next/link"
 

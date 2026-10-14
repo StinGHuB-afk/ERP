@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   Send,
   Loader2,
   Filter,
@@ -103,8 +102,8 @@ export function SupportTicketList({
       await respondToSupportTicket(selectedTicket.id, responseText, newStatus)
       setSelectedTicket(null)
       setResponseText("")
-    } catch (err: any) {
-      setError(err.message || "Failed to save response.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save response.")
     } finally {
       setLoading(false)
     }

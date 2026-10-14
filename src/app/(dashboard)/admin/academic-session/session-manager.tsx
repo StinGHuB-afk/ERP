@@ -39,8 +39,8 @@ export function SessionManager({ initialSessions }: { initialSessions: AcademicS
         setName("")
         setStartDate("")
         setEndDate("")
-      } catch (err: any) {
-        toast.error(err.message || "Failed to create session")
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to create session")
       }
     })
   }
@@ -54,8 +54,8 @@ export function SessionManager({ initialSessions }: { initialSessions: AcademicS
           ...s,
           status: s.id === id ? "ACTIVE" : "ARCHIVED"
         })))
-      } catch (err: any) {
-        toast.error(err.message || "Failed to activate session")
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to activate session")
       }
     })
   }
@@ -73,8 +73,8 @@ export function SessionManager({ initialSessions }: { initialSessions: AcademicS
         setSessions(sessions.map(s => s.id === id ? { ...s, status: "ARCHIVED" } : s))
         setConfirmId(null)
         setConfirmText("")
-      } catch (err: any) {
-        toast.error(err.message || "Failed to archive session. Ensure no draft/unpublished records remain.")
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to archive session. Ensure no draft/unpublished records remain.")
       }
     })
   }

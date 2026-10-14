@@ -37,8 +37,8 @@ export async function upsertAttendance(data: UpsertAttendanceInput) {
 
     try {
       await assertClassTeacherOwnership(teacherId, data.classId, activeSessionId)
-    } catch (e: any) {
-      return { error: e.message }
+    } catch (e: unknown) {
+      return { error: e instanceof Error ? e.message : "Ownership validation failed" }
     }
   } else {
     // Admin override: find the class teacher for the specified explicit session to record attendance against
@@ -58,7 +58,16 @@ export async function upsertAttendance(data: UpsertAttendanceInput) {
     }
 
     const attendanceDate = new Date(data.date)
+    if (isNaN(attendanceDate.getTime())) {
+      return { error: "Invalid date format provided for attendance." }
+    }
     attendanceDate.setHours(0, 0, 0, 0) // Normalize to midnight
+
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    if (attendanceDate > today) {
+      return { error: "Attendance cannot be recorded for future dates." }
+    }
 
     // Explicitly use activeSessionId from payload for Prisma operations, ignoring server calendar date
     const attendance = await prisma.attendance.upsert({
@@ -113,13 +122,22 @@ export async function bulkMarkPresent(classId: string, date: string, studentIds:
 
   try {
     await assertClassTeacherOwnership(teacher.id, classId, activeSessionId)
-  } catch (e: any) {
-    return { error: e.message }
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Ownership validation failed" }
   }
 
   try {
     const attendanceDate = new Date(date)
+    if (isNaN(attendanceDate.getTime())) {
+      return { error: "Invalid date format provided for attendance." }
+    }
     attendanceDate.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    if (attendanceDate > today) {
+      return { error: "Attendance cannot be recorded for future dates." }
+    }
 
     // Ensure all target students belong to the class
     const { validStudentIds } = await validateAttendanceRoster(studentIds, classId, activeSessionId)

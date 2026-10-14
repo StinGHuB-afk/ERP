@@ -17,7 +17,7 @@ type StudentWithAttendance = Student & {
   attendance: Attendance[]
 }
 
-type ClassWithStudents = Class & {
+export type ClassWithStudents = Class & {
   students: StudentWithAttendance[]
 }
 
@@ -72,7 +72,9 @@ export function TeacherAttendanceTable({
 
   // Attach online/offline event listeners
   useEffect(() => {
-    checkOfflineState()
+    const timer = setTimeout(() => {
+      checkOfflineState()
+    }, 0)
 
     const handleOnline = () => {
       setIsOffline(false)
@@ -88,6 +90,7 @@ export function TeacherAttendanceTable({
     window.addEventListener("offline", handleOffline)
 
     return () => {
+      clearTimeout(timer)
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }

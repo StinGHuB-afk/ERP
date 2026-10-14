@@ -6,7 +6,7 @@ export default async function Home() {
   let session = null
   try {
     session = await verifySession()
-  } catch (error) {
+  } catch (_error) {
     session = null
   }
 
@@ -20,7 +20,7 @@ export default async function Home() {
       where: { id: session.userId },
       select: { role: true },
     })
-  } catch (error) {
+  } catch (_error) {
     dbUser = null
   }
 

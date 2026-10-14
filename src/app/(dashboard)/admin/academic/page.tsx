@@ -30,7 +30,7 @@ function formatDayOfWeek(day: string): string {
 }
 
 export default async function AdminAcademicPage() {
-  const session = await verifySession()
+  const _session = await verifySession()
   const tenantId = await getEffectiveTenantId()
   if (!tenantId) return <div className="p-6">Unauthorized</div>
 

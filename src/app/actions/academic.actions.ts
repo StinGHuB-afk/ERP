@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { verifySession } from "@/lib/auth/session"
+import { verifySession, getEffectiveTenantId } from "@/lib/auth/session"
 import { Role, DayOfWeek, SubmissionStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 
@@ -32,15 +32,19 @@ async function resolveTenantContext(overrideSchoolId?: string) {
     throw new Error("Unauthorized: Authentication required.")
   }
 
+  const effectiveTenantId = await getEffectiveTenantId()
+
   if (session.role === Role.SUPERADMIN) {
-    return { session, schoolId: overrideSchoolId || session.schoolId || null }
+    return { session, schoolId: overrideSchoolId || effectiveTenantId || session.schoolId || null }
   }
 
-  if (!session.schoolId) {
+  const schoolId = session.schoolId || effectiveTenantId
+
+  if (!schoolId) {
     throw new Error("Orphaned account: No school association found.")
   }
 
-  return { session, schoolId: session.schoolId }
+  return { session, schoolId }
 }
 
 // ============================================================
@@ -122,7 +126,7 @@ export async function createTimetablePeriod(data: CreateTimetablePeriodInput) {
 
 export async function getTimetable(classId?: string, teacherId?: string, overrideSchoolId?: string) {
   try {
-    const { session, schoolId } = await resolveTenantContext(overrideSchoolId)
+    const { session: _session, schoolId } = await resolveTenantContext(overrideSchoolId)
 
     return await prisma.timetablePeriod.findMany({
       where: {
@@ -144,7 +148,7 @@ export async function getTimetable(classId?: string, teacherId?: string, overrid
         { startTime: "asc" },
       ],
     })
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }
@@ -228,7 +232,7 @@ export async function createAssignment(data: CreateAssignmentInput) {
 
 export async function getAssignments(classId?: string, overrideSchoolId?: string) {
   try {
-    const { session, schoolId } = await resolveTenantContext(overrideSchoolId)
+    const { session: _session, schoolId } = await resolveTenantContext(overrideSchoolId)
 
     return await prisma.assignment.findMany({
       where: {
@@ -255,7 +259,7 @@ export async function getAssignments(classId?: string, overrideSchoolId?: string
       },
       orderBy: { dueDate: "asc" },
     })
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }

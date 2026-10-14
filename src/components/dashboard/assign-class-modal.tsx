@@ -84,7 +84,7 @@ export function AssignClassModal({
                   <div className="mt-0.5">⚠️</div>
                   <div>
                     <strong>Warning:</strong> This class is already assigned to <strong>{selectedClassObj.teacherName}</strong>. 
-                    Assigning it to {teacherName} will remove {selectedClassObj.teacherName}'s access.
+                    Assigning it to {teacherName} will remove {selectedClassObj.teacherName}&apos;s access.
                   </div>
                 </div>
               )

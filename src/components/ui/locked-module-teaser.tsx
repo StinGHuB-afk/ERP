@@ -13,7 +13,7 @@ export function LockedModuleTeaser({ moduleName }: LockedModuleTeaserProps) {
       </div>
       <h2 className="text-2xl font-bold tracking-tight mb-2">Module Locked</h2>
       <p className="text-muted-foreground max-w-[500px] mb-8">
-        The {moduleName} module is not included in your current subscription plan. Unlock this feature to automate and streamline your school's operations.
+        The {moduleName} module is not included in your current subscription plan. Unlock this feature to automate and streamline your school&apos;s operations.
       </p>
       <Button size="lg" className="px-8">
         Contact Support to Upgrade

@@ -19,18 +19,31 @@ interface ViewTenantAdminsDialogProps {
   schoolName: string
 }
 
+type TenantAdminUser = Awaited<ReturnType<typeof getTenantAdmins>>[number]
+
 export function ViewTenantAdminsDialog({ schoolId, schoolName }: ViewTenantAdminsDialogProps) {
   const [open, setOpen] = useState(false)
-  const [admins, setAdmins] = useState<any[]>([])
+  const [admins, setAdmins] = useState<TenantAdminUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    let isCancelled = false
     if (open) {
-      setIsLoading(true)
-      getTenantAdmins(schoolId)
-        .then(setAdmins)
-        .catch(console.error)
-        .finally(() => setIsLoading(false))
+      const timer = setTimeout(() => {
+        setIsLoading(true)
+        getTenantAdmins(schoolId)
+          .then((data) => {
+            if (!isCancelled) setAdmins(data)
+          })
+          .catch(console.error)
+          .finally(() => {
+            if (!isCancelled) setIsLoading(false)
+          })
+      }, 0)
+      return () => {
+        isCancelled = true
+        clearTimeout(timer)
+      }
     }
   }, [open, schoolId])
 
@@ -66,7 +79,7 @@ export function ViewTenantAdminsDialog({ schoolId, schoolName }: ViewTenantAdmin
               <UserX className="h-8 w-8 text-slate-300 mx-auto mb-2" />
               <p className="text-sm font-medium text-slate-900">No administrators found</p>
               <p className="text-xs text-slate-500 mt-1">
-                Use the "Provision Admin" action to create an administrative account for this tenant.
+                Use the &quot;Provision Admin&quot; action to create an administrative account for this tenant.
               </p>
             </div>
           ) : (

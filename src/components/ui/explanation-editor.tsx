@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Plus, X, Type, Edit2 } from 'lucide-react'
+import { X, Type, Edit2 } from 'lucide-react'
 import type { ASTNode } from './explanation-renderer'
 
 interface ExplanationEditorProps {

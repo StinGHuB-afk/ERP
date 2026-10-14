@@ -2,43 +2,33 @@
   "results": [
     {
       "test": "Student2 login",
-      "status": "PASS",
-      "detail": "http://localhost:3000/student"
+      "status": "FAIL",
+      "detail": "http://localhost:3000/login"
     },
     {
       "test": "Direct navigation to subject",
       "status": "PASS",
-      "detail": "http://localhost:3000/student/learning-hub/4519d862-a17b-4ad7-ab04-cbfdc9d8f2a6"
+      "detail": "http://localhost:3000/login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fstudent%2Flearning-hub%2F4519d862-a17b-4ad7-ab04-cbfdc9d8f2a6&session_expired=true"
     },
     {
       "test": "FINAL UPLOAD TEST CHAPTER visible",
-      "status": "PASS",
+      "status": "FAIL",
       "detail": ""
     },
     {
       "test": "test-large.pdf resource listed",
-      "status": "PASS",
+      "status": "FAIL",
       "detail": ""
     },
     {
       "test": "Download button visible",
-      "status": "PASS",
+      "status": "FAIL",
       "detail": ""
     },
     {
       "test": "Download button with correct endpoint",
-      "status": "PASS",
-      "detail": "/api/notes/download/787a99d5-789c-4ff3-8c7d-68e99e254011?type=PDF"
-    },
-    {
-      "test": "Download endpoint HTTP 200",
-      "status": "PASS",
-      "detail": "Content-Type: application/pdf"
-    },
-    {
-      "test": "PDF content served directly",
-      "status": "PASS",
-      "detail": "Binary PDF response"
+      "status": "FAIL",
+      "detail": "Button not found"
     },
     {
       "test": "No SUPABASE_SECRET_KEY in responses",
@@ -53,17 +43,17 @@
     {
       "test": "Student2 blocked from /admin",
       "status": "PASS",
-      "detail": "http://localhost:3000/student"
+      "detail": "http://localhost:3000/login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fadmin&session_expired=true"
     },
     {
       "test": "Student2 blocked from /teacher",
       "status": "PASS",
-      "detail": "http://localhost:3000/student"
+      "detail": "http://localhost:3000/login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fteacher%2Fnotes&session_expired=true"
     },
     {
       "test": "Invalid subject URL denied",
       "status": "PASS",
-      "detail": "URL: http://localhost:3000/student/learning-hub/00000000-0000-0000-0000-000000000000"
+      "detail": "URL: http://localhost:3000/login?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fstudent%2Flearning-hub%2F00000000-0000-0000-0000-000000000000&session_expired=true"
     }
   ],
   "supabaseRequests": [],

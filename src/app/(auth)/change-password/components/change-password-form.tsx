@@ -21,11 +21,12 @@ export function ChangePasswordForm() {
         setError(res.error)
         setIsPending(false)
       }
-    } catch (err: any) {
-      if (err?.message === "NEXT_REDIRECT" || err?.digest?.startsWith("NEXT_REDIRECT")) {
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; digest?: string }
+      if (errorObj?.message === "NEXT_REDIRECT" || errorObj?.digest?.startsWith("NEXT_REDIRECT")) {
         throw err
       }
-      setError(err.message || "Failed to update password")
+      setError(errorObj?.message || "Failed to update password")
       setIsPending(false)
     }
   }
